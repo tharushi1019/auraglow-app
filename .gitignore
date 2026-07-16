@@ -1,0 +1,41 @@
+# ===========================
+# AuraGlow - Root .gitignore
+# ===========================
+
+# --- Environment Variables (NEVER COMMIT THESE!) ---
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# --- Node.js ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Frontend Build Outputs ---
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# --- Backend ---
+backend/dist/
+
+# --- OS / Editor Files ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Misc ---
+coverage/
+.nyc_output/
