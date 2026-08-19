@@ -101,3 +101,97 @@ body {
 
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-size: var(--text-xs); font-weight: var(--font-semibold); letter-spacing: 0.05em; border-radius: var(--radius-full); border: 1px solid transparent; }
 .badge-cf { background: rgba(184,169,217,0.12); border-color: rgba(184,169,217,0.3); color: var(--color-accent-lavender); }
+
+/* ==========================================================================
+   ✨ GLOW ENHANCEMENTS — Applied across all pages
+   ========================================================================== */
+
+/* Progress dots glow */
+.quiz-progress-dot.active {
+  background: var(--gradient-brand);
+  box-shadow: 0 0 8px rgba(232,180,160,0.4), 0 0 20px rgba(232,180,160,0.2);
+}
+
+/* Option chips glow on hover & selected */
+.option-chip {
+  backdrop-filter: blur(8px);
+  transition: all var(--transition-fast), box-shadow var(--transition-base);
+}
+
+.option-chip:hover {
+  border-color: rgba(232,180,160,0.4);
+  box-shadow: 0 0 12px rgba(232,180,160,0.1);
+  background: rgba(255,255,255,0.06);
+}
+
+.option-chip.selected {
+  background: rgba(232,180,160,0.12);
+  border-color: var(--color-accent-rose);
+  color: var(--color-accent-rose);
+  box-shadow: 0 0 16px rgba(232,180,160,0.25), 0 0 40px rgba(232,180,160,0.1), inset 0 0 12px rgba(232,180,160,0.06);
+}
+
+/* Profile rows subtle glow on hover */
+.profile-row {
+  transition: background var(--transition-fast);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-2);
+}
+
+.profile-row:hover {
+  background: rgba(232,180,160,0.04);
+}
+
+/* Badge glow */
+.badge-cf {
+  box-shadow: 0 0 10px rgba(184,169,217,0.2), 0 0 20px rgba(184,169,217,0.08);
+}
+
+/* Primary button enhanced glow */
+.btn-primary {
+  box-shadow: 0 4px 20px rgba(232,180,160,0.25), 0 0 30px rgba(232,180,160,0.08);
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 4px 20px rgba(232,180,160,0.4), 0 0 50px rgba(232,180,160,0.15), 0 0 80px rgba(212,168,199,0.08);
+}
+
+/* Secondary button glow */
+.btn-secondary:hover:not(:disabled) {
+  box-shadow: 0 0 16px rgba(232,180,160,0.12);
+}
+
+/* Ghost button glow */
+.btn-ghost:hover:not(:disabled) {
+  box-shadow: 0 0 12px rgba(255,255,255,0.05);
+}
+
+/* Card hover glow enhancement */
+.card:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 60px rgba(232,180,160,0.08);
+}
+
+/* Page title shimmer animation */
+.page-title {
+  animation: titleShimmer 4s ease-in-out infinite alternate;
+}
+
+@keyframes titleShimmer {
+  0%   { filter: brightness(1) drop-shadow(0 0 0px transparent); }
+  100% { filter: brightness(1.15) drop-shadow(0 0 8px rgba(232,180,160,0.3)); }
+}
+
+/* Form input focus glow */
+.form-input:focus {
+  box-shadow: 0 0 0 3px rgba(232,180,160,0.12), 0 0 16px rgba(232,180,160,0.08);
+}
+
+/* Alert banner glow */
+.alert-banner {
+  box-shadow: 0 0 12px rgba(232,122,122,0.1);
+}
+
+.alert-banner.success {
+  box-shadow: 0 0 12px rgba(126,200,160,0.1);
+}
+
