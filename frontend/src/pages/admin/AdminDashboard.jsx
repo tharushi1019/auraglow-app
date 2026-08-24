@@ -36,7 +36,7 @@ export default function AdminDashboard() {
       {/* Stats Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-10)' }}>
         {/* Stat 1 — Revenue */}
-        <div className="hover-lift fade-in-up delay-1" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)', display: 'flex', gap: 'var(--space-4)', transition: 'border-color 250ms ease' }}>
+        <div className="card hover-lift" style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', background: 'rgba(232,180,160,0.1)', border: '1px solid rgba(232,180,160,0.2)', flexShrink: 0 }}>
             💰
           </div>
@@ -44,12 +44,12 @@ export default function AdminDashboard() {
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', background: 'var(--gradient-text)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               {formatPrice(1245000)}
             </div>
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>TODAY'S REVENUE</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>Today's Revenue</div>
           </div>
         </div>
 
         {/* Stat 2 — Orders */}
-        <div className="hover-lift fade-in-up delay-2" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)', display: 'flex', gap: 'var(--space-4)' }}>
+        <div className="card hover-lift" style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', background: 'rgba(126,200,160,0.1)', border: '1px solid rgba(126,200,160,0.2)', flexShrink: 0 }}>
             📦
           </div>
@@ -57,12 +57,12 @@ export default function AdminDashboard() {
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-success)' }}>
               142
             </div>
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>NEW ORDERS</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>New Orders</div>
           </div>
         </div>
 
         {/* Stat 3 — Low Stock */}
-        <div className="hover-lift fade-in-up delay-3" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)', display: 'flex', gap: 'var(--space-4)' }}>
+        <div className="card hover-lift" style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', background: 'rgba(240,200,122,0.1)', border: '1px solid rgba(240,200,122,0.2)', flexShrink: 0 }}>
             ⚠️
           </div>
@@ -70,12 +70,12 @@ export default function AdminDashboard() {
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-warning)' }}>
               {lowStockCount}
             </div>
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>LOW STOCK ITEMS</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>Low Stock Items</div>
           </div>
         </div>
 
         {/* Stat 4 — Users */}
-        <div className="hover-lift fade-in-up delay-4" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)', display: 'flex', gap: 'var(--space-4)' }}>
+        <div className="card hover-lift" style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', background: 'rgba(184,169,217,0.1)', border: '1px solid rgba(184,169,217,0.2)', flexShrink: 0 }}>
             👥
           </div>
@@ -83,7 +83,7 @@ export default function AdminDashboard() {
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-accent-lavender)' }}>
               1,842
             </div>
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>ACTIVE USERS</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>Active Users</div>
           </div>
         </div>
       </div>

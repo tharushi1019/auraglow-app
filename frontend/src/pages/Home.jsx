@@ -87,15 +87,14 @@ function Stars({ count }) {
   );
 }
 
-function ProductCard({ p, index = 0 }) {
+function ProductCard({ p }) {
   const [hovered, setHovered] = useState(false);
   const { formatPrice } = useCurrency();
   return (
     <div
-      className={`product-card hover-lift fade-in-up delay-${(index % 4) + 1}`}
+      className="product-card"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{ position: 'relative' }}
     >
       {/* Match badge */}
       <div style={{ position: 'absolute', top: '12px', left: '12px', zIndex: 2, background: 'rgba(13,13,15,0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(184,169,217,0.4)', borderRadius: 'var(--radius-full)', padding: '3px 10px', fontSize: 'var(--text-xs)', fontWeight: '600', color: 'var(--color-accent-lavender)' }}>
@@ -236,12 +235,9 @@ export default function Home() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-4)' }}>
-          {categories.map((cat, idx) => (
-            <Link key={cat.name} to="/products" className={`hover-lift fade-in-up delay-${idx + 1}`} style={{ textDecoration: 'none', borderRadius: 'var(--radius-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '3/4', display: 'block', border: `1px solid ${cat.border}`, transition: 'transform 250ms ease, box-shadow 250ms ease' }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-6px)'; e.currentTarget.style.boxShadow = '0 20px 60px rgba(0,0,0,0.4)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-            >
-              <img src={cat.img} alt={cat.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 400ms ease' }} />
+          {categories.map((cat) => (
+            <Link key={cat.name} to="/products" className="category-card" style={{ textDecoration: 'none', borderRadius: 'var(--radius-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '3/4', display: 'block', border: `1px solid ${cat.border}` }}>
+              <img src={cat.img} alt={cat.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }} />
               <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, rgba(13,13,15,0.92) 30%, ${cat.color} 100%)` }} />
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 'var(--space-5)' }}>
                 <div style={{ fontSize: '28px', marginBottom: 'var(--space-2)' }}>{cat.emoji}</div>
@@ -263,7 +259,7 @@ export default function Home() {
           <Link to="/products" className="btn btn-ghost btn-sm btn-pill">View All Products →</Link>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-6)' }}>
-          {featured.map((p, idx) => <ProductCard key={p.id} p={p} index={idx} />)}
+          {featured.map(p => <ProductCard key={p.id} p={p} />)}
         </div>
       </section>
 
