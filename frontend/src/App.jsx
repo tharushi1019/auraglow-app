@@ -6,6 +6,8 @@ import './styles/globals.css'
 // import Footer from './components/common/Footer'
 
 // ─── Pages (import when each member creates their module) ──────────────────
+import Home from './pages/Home'
+
 // Module 1 (Dinu) — Auth
 // import LoginPage from './pages/LoginPage'
 // import RegisterPage from './pages/RegisterPage'
@@ -28,51 +30,58 @@ import './styles/globals.css'
 // import OrderTrackingPage from './pages/OrderTrackingPage'
 
 // Module 6 (Tharushi) — Admin
-// import AdminDashboard from './pages/admin/AdminDashboard'
-// import AdminProducts from './pages/admin/AdminProducts'
-// import AdminOrders from './pages/admin/AdminOrders'
+import AdminLayout from './components/admin/AdminLayout'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminProducts from './pages/admin/AdminProducts'
+import AdminOrders from './pages/admin/AdminOrders'
 
 // ──────────────────────────────────────────────────────────────────────────
 
 function App() {
   return (
     <BrowserRouter>
-      {/* <Navbar /> */}
-      <main className="page-content">
-        <Routes>
-          {/* ── Public Routes ── */}
-          <Route path="/" element={<ComingSoon label="Home / Landing Page" module="All Modules" />} />
-          <Route path="/login" element={<ComingSoon label="Login Page" module="Module 1 — Dinu (Auth)" />} />
-          <Route path="/register" element={<ComingSoon label="Register Page" module="Module 1 — Dinu (Auth)" />} />
-          <Route path="/profile" element={<ComingSoon label="User Profile" module="Module 1 — Dinu (Auth)" />} />
-          <Route path="/skin-quiz" element={<ComingSoon label="Skin Quiz" module="Module 1 — Dinu (Auth)" />} />
+      <Routes>
+        {/* ── Home (manages its own nav + layout) ── */}
+        <Route path="/" element={<Home />} />
 
-          {/* ── Product Routes ── */}
-          <Route path="/products" element={<ComingSoon label="Product Catalog" module="Module 2 — Keshara (Catalog)" />} />
-          <Route path="/products/:id" element={<ComingSoon label="Product Detail" module="Module 2 — Keshara (Catalog)" />} />
+        {/* ── Auth pages with page-content padding ── */}
+        <Route path="/login"     element={<PageWrapper><ComingSoon label="Login Page"    module="Module 1 — Dinu (Auth)" /></PageWrapper>} />
+        <Route path="/register"  element={<PageWrapper><ComingSoon label="Register Page" module="Module 1 — Dinu (Auth)" /></PageWrapper>} />
+        <Route path="/profile"   element={<PageWrapper><ComingSoon label="User Profile"  module="Module 1 — Dinu (Auth)" /></PageWrapper>} />
+        <Route path="/skin-quiz" element={<PageWrapper><ComingSoon label="Skin Quiz"     module="Module 1 — Dinu (Auth)" /></PageWrapper>} />
 
-          {/* ── Cart & Wishlist ── */}
-          <Route path="/cart" element={<ComingSoon label="Shopping Cart" module="Module 3 — Achani (Cart)" />} />
-          <Route path="/wishlist" element={<ComingSoon label="Wishlist" module="Module 3 — Achani (Cart)" />} />
+        {/* ── Product Routes ── */}
+        <Route path="/products"    element={<PageWrapper><ComingSoon label="Product Catalog" module="Module 2 — Keshara (Catalog)" /></PageWrapper>} />
+        <Route path="/products/:id" element={<PageWrapper><ComingSoon label="Product Detail" module="Module 2 — Keshara (Catalog)" /></PageWrapper>} />
 
-          {/* ── Checkout ── */}
-          <Route path="/checkout" element={<ComingSoon label="Checkout" module="Module 5 — Kaveesha (Checkout)" />} />
-          <Route path="/orders/:id" element={<ComingSoon label="Order Tracking" module="Module 5 — Kaveesha (Checkout)" />} />
-          <Route path="/support" element={<ComingSoon label="Customer Support / FAQ" module="Module 5 — Kaveesha (Checkout)" />} />
+        {/* ── Cart & Wishlist ── */}
+        <Route path="/cart"     element={<PageWrapper><ComingSoon label="Shopping Cart" module="Module 3 — Achani (Cart)" /></PageWrapper>} />
+        <Route path="/wishlist" element={<PageWrapper><ComingSoon label="Wishlist"      module="Module 3 — Achani (Cart)" /></PageWrapper>} />
 
-          {/* ── Admin Routes ── */}
-          <Route path="/admin" element={<ComingSoon label="Admin Dashboard" module="Module 6 — Tharushi (Admin)" />} />
-          <Route path="/admin/products" element={<ComingSoon label="Admin Products" module="Module 6 — Tharushi (Admin)" />} />
-          <Route path="/admin/orders" element={<ComingSoon label="Admin Orders" module="Module 6 — Tharushi (Admin)" />} />
+        {/* ── Checkout ── */}
+        <Route path="/checkout"    element={<PageWrapper><ComingSoon label="Checkout"         module="Module 5 — Kaveesha (Checkout)" /></PageWrapper>} />
+        <Route path="/orders/:id"  element={<PageWrapper><ComingSoon label="Order Tracking"   module="Module 5 — Kaveesha (Checkout)" /></PageWrapper>} />
+        <Route path="/support"     element={<PageWrapper><ComingSoon label="Customer Support" module="Module 5 — Kaveesha (Checkout)" /></PageWrapper>} />
 
-          {/* ── Fallback ── */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-      {/* <Footer /> */}
+        {/* ── Admin Routes (AdminLayout manages its own space) ── */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index         element={<AdminDashboard />} />
+          <Route path="products" element={<AdminProducts />} />
+          <Route path="orders"   element={<AdminOrders />} />
+        </Route>
+
+        {/* ── Fallback ── */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </BrowserRouter>
   )
 }
+
+// Wrapper that adds top-nav padding for non-home pages
+function PageWrapper({ children }) {
+  return <main className="page-content">{children}</main>
+}
+
 
 // ── Temporary placeholder shown until each module is built ──────────────────
 function ComingSoon({ label, module }) {

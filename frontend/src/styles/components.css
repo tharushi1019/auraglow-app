@@ -101,6 +101,13 @@
    🃏 CARDS
    ========================================================================== */
 
+/* Card Grids */
+.card-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-6);
+}
+
 /* Product card */
 .product-card {
   background: var(--color-bg-card);
@@ -127,6 +134,7 @@
   aspect-ratio: 1 / 1;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.02);
+  position: relative;
 }
 
 .product-card__image {
