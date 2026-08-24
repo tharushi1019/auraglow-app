@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCurrency } from '@/context/CurrencyContext';
+import { products } from '@/data/mockData';
 
 const recentOrders = [
   { id: 'ORD-8941', customer: 'Jane Doe',     status: 'Processing', amount: 14500, badgeClass: 'badge-warning' },
@@ -10,13 +11,24 @@ const recentOrders = [
 
 export default function AdminDashboard() {
   const { formatPrice } = useCurrency();
+  const [now, setNow]   = useState(new Date());
+
+  useEffect(() => {
+    document.title = 'AuraGlow Admin — Dashboard';
+    const timer = setInterval(() => setNow(new Date()), 60000); // update every minute
+    return () => clearInterval(timer);
+  }, []);
+
+  const today = now.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const lowStockCount   = products.filter(p => p.stock > 0 && p.stock < 20).length;
+  const outOfStockCount = products.filter(p => p.stock === 0).length;
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 'var(--space-8)' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-3xl)', fontWeight: '700', marginBottom: 'var(--space-2)' }}>Dashboard Overview</h1>
-          <p style={{ color: 'var(--color-text-secondary)' }}>Welcome back, Tharushi. Here's what's happening with AuraGlow today.</p>
+          <p style={{ color: 'var(--color-text-secondary)' }}>Welcome back, Tharushi. &nbsp;<span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>{today}</span></p>
         </div>
         <button className="btn btn-primary">Download Report</button>
       </div>
@@ -56,7 +68,7 @@ export default function AdminDashboard() {
           </div>
           <div>
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-warning)' }}>
-              8
+              {lowStockCount}
             </div>
             <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>LOW STOCK ITEMS</div>
           </div>

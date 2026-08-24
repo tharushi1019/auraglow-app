@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCurrency } from '@/context/CurrencyContext';
 
 const initialOrders = [
@@ -13,6 +13,8 @@ const statusOptions = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancell
 export default function AdminOrders() {
   const [orders, setOrders] = useState(initialOrders);
   const { formatPrice } = useCurrency();
+
+  useEffect(() => { document.title = 'AuraGlow Admin — Orders'; }, []);
 
   const handleStatusChange = (id, newStatus) => {
     setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));

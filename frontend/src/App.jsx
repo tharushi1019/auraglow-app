@@ -34,6 +34,7 @@ import AdminLayout from './components/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminOrders from './pages/admin/AdminOrders'
+import NotFound from './pages/NotFound'
 
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -70,8 +71,8 @@ function App() {
           <Route path="orders"   element={<AdminOrders />} />
         </Route>
 
-        {/* ── Fallback ── */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* ── Fallback 404 ── */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   )
