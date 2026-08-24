@@ -38,7 +38,7 @@ export default function AdminOrders() {
         <p style={{ color: 'var(--color-text-secondary)' }}>View and update customer orders.</p>
       </div>
 
-      <div className="card glass" style={{ padding: '0', overflowX: 'auto' }}>
+      <div className="card glass fade-in-up delay-2" style={{ padding: '0', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'rgba(255,255,255,0.02)' }}>

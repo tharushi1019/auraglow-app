@@ -87,12 +87,12 @@ function Stars({ count }) {
   );
 }
 
-function ProductCard({ p }) {
+function ProductCard({ p, index = 0 }) {
   const [hovered, setHovered] = useState(false);
   const { formatPrice } = useCurrency();
   return (
     <div
-      className="product-card"
+      className={`product-card hover-lift fade-in-up delay-${(index % 4) + 1}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{ position: 'relative' }}
@@ -157,29 +157,29 @@ export default function Home() {
         overflow: 'hidden',
       }}>
         {/* Left copy */}
-        <div style={{ padding: 'var(--space-16) var(--space-12)', background: 'var(--gradient-hero)' }}>
+        <div className="slide-in-left" style={{ padding: 'var(--space-16) var(--space-12)', background: 'var(--gradient-hero)' }}>
           <div style={{ marginBottom: 'var(--space-4)', display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', background: 'rgba(232,180,160,0.1)', border: '1px solid rgba(232,180,160,0.3)', borderRadius: 'var(--radius-full)', padding: '6px 16px', fontSize: 'var(--text-xs)', fontWeight: '600', color: 'var(--color-accent-rose)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             ✨ New Arrivals — Summer Glow Collection
           </div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.8rem, 5vw, 4.5rem)', fontWeight: '800', lineHeight: 1.05, marginBottom: 'var(--space-6)', letterSpacing: '-0.02em' }}>
             <span style={{ color: 'var(--color-text-primary)' }}>Beauty that</span><br />
-            <span style={{ background: 'var(--gradient-text)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>knows your skin.</span>
+            <span className="shimmer-text">knows your skin.</span>
           </h1>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-md)', marginBottom: 'var(--space-8)', maxWidth: '480px', lineHeight: 1.7 }}>
             Personalized clean beauty powered by your unique skin profile. Vegan, cruelty-free, and made with ingredients your skin will love.
           </p>
           <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', marginBottom: 'var(--space-10)' }}>
-            <Link to="/skin-quiz" className="btn btn-primary btn-lg btn-pill">
+            <Link to="/skin-quiz" className="btn btn-primary btn-lg btn-pill glow-pulse">
               ✨ Take the Skin Quiz
             </Link>
-            <Link to="/products" className="btn btn-secondary btn-lg btn-pill">
+            <Link to="/products" className="btn btn-secondary btn-lg btn-pill hover-lift">
               Shop All Products
             </Link>
           </div>
           {/* Trust Badges */}
           <div style={{ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap' }}>
-            {['🌱 100% Vegan', '🐰 Cruelty-Free', '♻️ Eco Packaging', '🔬 Dermatologist Tested'].map(badge => (
-              <div key={badge} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: '500' }}>
+            {['🌱 100% Vegan', '🐰 Cruelty-Free', '♻️ Eco Packaging', '🔬 Dermatologist Tested'].map((badge, idx) => (
+              <div key={badge} className={`fade-in-up delay-${idx + 1}`} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: '500' }}>
                 {badge}
               </div>
             ))}
@@ -187,7 +187,7 @@ export default function Home() {
         </div>
 
         {/* Right hero image collage */}
-        <div style={{ position: 'relative', height: 'calc(100vh - var(--nav-height))', overflow: 'hidden' }}>
+        <div className="slide-in-right" style={{ position: 'relative', height: 'calc(100vh - var(--nav-height))', overflow: 'hidden' }}>
           <img
             src="https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=900&q=85"
             alt="AuraGlow Hero"
@@ -196,13 +196,13 @@ export default function Home() {
           {/* Gradient overlay on right */}
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, var(--color-bg-primary) 0%, transparent 20%), linear-gradient(to top, rgba(13,13,15,0.6) 0%, transparent 50%)' }} />
           {/* Floating stat card */}
-          <div style={{ position: 'absolute', bottom: '80px', left: '32px', background: 'rgba(13,13,15,0.85)', backdropFilter: 'blur(20px)', border: '1px solid rgba(232,180,160,0.3)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-4) var(--space-5)' }}>
+          <div className="float" style={{ position: 'absolute', bottom: '80px', left: '32px', background: 'rgba(13,13,15,0.85)', backdropFilter: 'blur(20px)', border: '1px solid rgba(232,180,160,0.3)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-4) var(--space-5)' }}>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: '4px' }}>SKIN MATCH SCORE</p>
             <p style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: '800', background: 'var(--gradient-text)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>96%</p>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>Matched to your skin profile ✨</p>
           </div>
           {/* Floating review card */}
-          <div style={{ position: 'absolute', top: '80px', right: '32px', background: 'rgba(13,13,15,0.85)', backdropFilter: 'blur(20px)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-4) var(--space-5)', maxWidth: '220px' }}>
+          <div className="float" style={{ animationDelay: '1.5s', position: 'absolute', top: '80px', right: '32px', background: 'rgba(13,13,15,0.85)', backdropFilter: 'blur(20px)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-4) var(--space-5)', maxWidth: '220px' }}>
             <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
               {[1,2,3,4,5].map(i => <span key={i} style={{ color: 'var(--color-accent-gold)', fontSize: '12px' }}>★</span>)}
             </div>
@@ -236,8 +236,8 @@ export default function Home() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-4)' }}>
-          {categories.map(cat => (
-            <Link key={cat.name} to="/products" style={{ textDecoration: 'none', borderRadius: 'var(--radius-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '3/4', display: 'block', border: `1px solid ${cat.border}`, transition: 'transform 250ms ease, box-shadow 250ms ease' }}
+          {categories.map((cat, idx) => (
+            <Link key={cat.name} to="/products" className={`hover-lift fade-in-up delay-${idx + 1}`} style={{ textDecoration: 'none', borderRadius: 'var(--radius-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '3/4', display: 'block', border: `1px solid ${cat.border}`, transition: 'transform 250ms ease, box-shadow 250ms ease' }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-6px)'; e.currentTarget.style.boxShadow = '0 20px 60px rgba(0,0,0,0.4)'; }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
             >
@@ -263,12 +263,12 @@ export default function Home() {
           <Link to="/products" className="btn btn-ghost btn-sm btn-pill">View All Products →</Link>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-6)' }}>
-          {featured.map((p, i) => <ProductCard key={i} p={p} />)}
+          {featured.map((p, idx) => <ProductCard key={p.id} p={p} index={idx} />)}
         </div>
       </section>
 
       {/* ── 6. SKIN QUIZ PROMO BANNER ──────────────────────────────────────── */}
-      <section style={{ margin: 'var(--space-16) 0', background: 'linear-gradient(135deg, rgba(232,180,160,0.08) 0%, rgba(184,169,217,0.08) 100%)', border: 'none', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', padding: 'var(--space-16) var(--space-10)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+      <section className="fade-in" style={{ margin: 'var(--space-16) 0', background: 'linear-gradient(135deg, rgba(232,180,160,0.08) 0%, rgba(184,169,217,0.08) 100%)', border: 'none', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', padding: 'var(--space-16) var(--space-10)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-50%', left: '50%', transform: 'translateX(-50%)', width: '600px', height: '600px', background: 'radial-gradient(ellipse, rgba(232,180,160,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <p style={{ fontSize: 'var(--text-xs)', fontWeight: '600', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--color-accent-rose)', marginBottom: 'var(--space-4)', position: 'relative' }}>Personalized for You</p>
         <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: '800', marginBottom: 'var(--space-4)', position: 'relative' }}>

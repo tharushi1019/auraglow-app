@@ -36,7 +36,7 @@ export default function AdminDashboard() {
       {/* Stats Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-10)' }}>
         {/* Stat 1 — Revenue */}
-        <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)', display: 'flex', gap: 'var(--space-4)', transition: 'border-color 250ms ease' }}>
+        <div className="hover-lift fade-in-up delay-1" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)', display: 'flex', gap: 'var(--space-4)', transition: 'border-color 250ms ease' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', background: 'rgba(232,180,160,0.1)', border: '1px solid rgba(232,180,160,0.2)', flexShrink: 0 }}>
             💰
           </div>
@@ -49,7 +49,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stat 2 — Orders */}
-        <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)', display: 'flex', gap: 'var(--space-4)' }}>
+        <div className="hover-lift fade-in-up delay-2" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)', display: 'flex', gap: 'var(--space-4)' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', background: 'rgba(126,200,160,0.1)', border: '1px solid rgba(126,200,160,0.2)', flexShrink: 0 }}>
             📦
           </div>
@@ -62,7 +62,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stat 3 — Low Stock */}
-        <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)', display: 'flex', gap: 'var(--space-4)' }}>
+        <div className="hover-lift fade-in-up delay-3" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)', display: 'flex', gap: 'var(--space-4)' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', background: 'rgba(240,200,122,0.1)', border: '1px solid rgba(240,200,122,0.2)', flexShrink: 0 }}>
             ⚠️
           </div>
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stat 4 — Users */}
-        <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)', display: 'flex', gap: 'var(--space-4)' }}>
+        <div className="hover-lift fade-in-up delay-4" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)', display: 'flex', gap: 'var(--space-4)' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', background: 'rgba(184,169,217,0.1)', border: '1px solid rgba(184,169,217,0.2)', flexShrink: 0 }}>
             👥
           </div>
@@ -89,7 +89,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Recent Orders Table */}
-      <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)' }}>
+      <div className="fade-in-up delay-5" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-6)' }}>
         <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: '600', marginBottom: 'var(--space-6)' }}>Recent Orders</h2>
 
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>

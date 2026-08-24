@@ -82,7 +82,7 @@ export default function AdminProducts() {
       </div>
 
       {/* Table */}
-      <div className="card glass" style={{ padding: '0', overflowX: 'auto' }}>
+      <div className="card glass fade-in-up delay-2" style={{ padding: '0', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'rgba(255,255,255,0.02)' }}>
@@ -119,8 +119,8 @@ export default function AdminProducts() {
 
       {/* Add Product Modal */}
       {showAddModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(13,13,15,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="card glass-strong" style={{ width: '100%', maxWidth: '500px', padding: 'var(--space-6)' }}>
+        <div className="fade-in" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(13,13,15,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card glass-strong scale-in" style={{ width: '100%', maxWidth: '500px', padding: 'var(--space-6)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-6)' }}>
               <h3>Add New Product</h3>
               <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowAddModal(false)}>✕</button>
