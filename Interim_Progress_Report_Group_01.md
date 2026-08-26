@@ -81,6 +81,115 @@ This Interim Progress Report (CA 02) demonstrates that our team has achieved **w
 
 ---
 
+### 2.3. Module 2: Product Catalog, Search & Product Detail (Keshara)
+*Status: 100% of Milestone Completed*
+
+- **Product Catalog Suite (`CatalogPage.jsx` & `/products`):**
+  - **Live Dynamic Search & Debounced Filtering:** Instant search bar filtering by product title, brand, description, tags, and key active botanical ingredients.
+  - **Category Switching & Filter Navigation:** Interactive category pills (All, Skincare, Makeup, Fragrance, Tools) with real-time product count badges and URL parameter synchronization (`?category=skincare`).
+  - **Dynamic Multi-Currency Price Slider:** Range slider mapped to active currency context with min/max bounds and live formatted currency output.
+  - **Attribute & Ethical Checkboxes:** Instant filtering for *Vegan Only* (🌱), *Cruelty-Free Only* (🐰), and *In Stock Only* (📦).
+  - **Multi-Factor Sorting:** Instant sort by *Best Sellers*, *Highest Rated*, *Price: Low to High*, *Price: High to Low*, and *Product Name (A-Z)*.
+  - **Layout View Mode Switcher:** Smooth toggle between **4-Column Responsive Grid View** and **Detailed 2-Column List View**.
+  - **Active Filter Chips & Reset Flow:** Dynamic filter chip bar allowing single-click removal of individual active filters or full catalog reset.
+  - **Quick View Pop-in Modal (`ProductQuickViewModal.jsx`):** Allows users to inspect product image galleries, description, actives, and quantity selectors without navigating away from the catalog.
+
+- **Comprehensive Product Detail Page (`ProductDetailPage.jsx` & `/products/:id`):**
+  - **Breadcrumb Navigation Hierarchy:** Deep link breadcrumbs (`Home > Shop > Skincare > Radiant Glow Serum`).
+  - **Interactive Image Gallery Stage (`ProductImageGallery.jsx`):** High-resolution image viewport with cursor-tracking zoom-on-hover effect and thumbnail selector.
+  - **Dynamic Pricing & Stock Tracker:** Real-time multi-currency price recalculation with percentage savings badge (`Save X%`), live stock status tracker, and low-stock alerts.
+  - **Interactive Information Tabs:**
+    1. *Description & Clinical Benefits:* In-depth formulation details, clinical highlights, and non-comedogenic certifications.
+    2. *Clean Ingredients Breakdown:* Visual grid cards for each botanical active (Vitamin C, Rose Hip Oil, Hyaluronic Acid, etc.).
+    3. *Daily Application Ritual:* Step-by-step skincare instructions with visual regimen guides (Cleanse → Apply → Hydrate).
+    4. *Skin Compatibility:* Diagnostic suitability tags matching user skin types (Dry, Sensitive, Oily, Combination).
+  - **Customer Reviews & Ratings Breakdown (`ProductReviewsPreview.jsx`):** Visual 5-star distribution bar charts, verified customer reviews, and interactive "Write a Review" modal dialog.
+  - **"You May Also Love" Cross-Sell Carousel:** Smart recommendations matching the product's category and botanical tags.
+
+- **Backend Product Catalog REST API (`backend/src/controllers/product.controller.js` & `backend/src/routes/product.routes.js`):**
+  - `GET /api/v1/products`: Multi-parameter querying for search, category, price range, vegan/cruelty-free flags, stock availability, and sorting.
+  - `GET /api/v1/products/categories`: Dynamic category metadata with real-time product counts.
+  - `GET /api/v1/products/featured`: Best-seller and trending product highlights.
+  - `GET /api/v1/products/:id`: Complete single product details with ingredient breakdown and application guide.
+  - `GET /api/v1/products/:id/related`: Related and recommended products by category and tags.
+  - **Frontend Service Layer (`productService.js`):** Graceful hybrid data layer with automatic failover between live REST API and offline mock data.
+
+---
+
+### 2.4. Module 4: Reviews, Ratings & AI Recommendations (Maduni)
+*Status: 100% of Milestone Completed*
+
+- **Customer Reviews & Rating Suite (`ReviewsSection.jsx` & `RatingBreakdown.jsx`):**
+  - **Comprehensive Rating Overview:** Interactive visual distribution bars (5★ down to 1★ percentage distributions), overall mean score, and verified recommendation percentage (*"96% of customers recommend this product"*).
+  - **Multi-Faceted Review Filtering & Sorting:** Instant filtering by star rating, skin type matches (e.g. *Dry*, *Combination*, *Sensitive*), verified buyer tags, and sorting by *Most Recent*, *Most Helpful*, *Highest Rated*, and *Lowest Rated*.
+  - **In-Review Search Engine:** Fast real-time keyword search across review titles, comments, and customer names.
+  - **Interactive Review Card Architecture (`ReviewCard.jsx`):** Displays customer avatar, verified buyer badge, skin type and primary skin concern tags, star ratings, date, and helpfulness voting with live upvote counters.
+  - **Modal Review Submission Flow (`ReviewFormModal.jsx`):** Glassmorphic pop-in modal with interactive star rating selector, headline, detailed comment validation (min 10 characters), skin profile tagger, and optimistic UI updates.
+
+- **AI-Powered Recommendation & Routine Advisor Engine (`RecommendationsPage.jsx` & `/recommendations`):**
+  - **Personalized Compatibility Match Score (`SkinMatchBadge.jsx`):** AI compatibility score displayed on all product detail pages and catalog items (e.g., *98% Match for Combination Skin*).
+  - **4-Step AM / PM Routine Builder (`PersonalizedRoutineWidget.jsx`):** Layer-by-layer synergistic skincare regimens (*Cleanse → Treat → Hydrate → UV Shield*) with morning (☀️) and night (🌙) schedule toggles.
+  - **Synergistic Ingredient Intelligence:** Breakdown cards explaining botanical and clinical actions for key actives (Rose Hip Oil, Multi-Weight Hyaluronic Acid, Ethylated Vitamin C, Green Tea EGCG).
+  - **15% Complete Routine Bundle Action:** Calculates full routine bundle pricing with automated 15% discount savings and 1-click add to cart.
+
+- **Backend Review & Recommendation REST API (`review.controller.js` & `review.routes.js`):**
+  - `GET /api/v1/reviews/product/:productId`: Paginated product reviews with multi-factor filtering and sorting.
+  - `GET /api/v1/reviews/stats/:productId`: Aggregate rating statistics, star breakdowns, and recommendation ratios.
+  - `POST /api/v1/reviews`: Validated customer review creation with skin profile tagging.
+  - `POST /api/v1/reviews/:id/vote`: Live helpfulness voting endpoint.
+  - `GET /api/v1/recommendations/skin-profile`: Tailored routine algorithms matching user skin diagnostics.
+  - **Frontend Service Layer (`reviewService.js` & `recommendationService.js`):** Offline-first architecture with mock caching and instant synchronization.
+
+---
+
+### 2.5. Module 3: Shopping Cart & Wishlist (Achani)
+*Status: 100% of Milestone Completed*
+
+- **Shopping Bag Module (`CartPage.jsx` & `/cart`):**
+  - **Responsive Detailed Summary Grid:** Displays product thumbnails, category metadata, product name, and unit pricing.
+  - **Stock Alerts & Thresholds:** Highlights low-stock counts to prevent checkout errors (e.g. *Only X remaining!*).
+  - **Interactive Quantity adjusters:** Inline counter widgets allowing users to increase or decrease quantities respecting inventory thresholds.
+  - **Routine Bundle Discount Engine:** Automatically detects when the customer's cart contains 3 or more items and applies a 15% discount across the cart subtotal.
+  - **Dynamic Promo Code Sandbox:** Validates and applies promo codes (`GLOW15` for 15% Off, `CLEANBEAUTY` for 10% Off) with instant recalculations.
+  - **Flexible Shipping threshold calculation:** Live indicator bar tracking progress toward free shipping (unlocked above Rs. 15,000).
+  - **Dynamic Multi-Currency Totalization:** Calculates subtotals, bundle discounts, shipping costs, and grand totals instantly under the active user currency context.
+
+- **Wishlist Manager Module (`WishlistPage.jsx` & `/wishlist`):**
+  - **Persistent Wishlist Board:** Renders responsive cards for all wishlisted items.
+  - **Quick Cart Actions:** Add individual wishlisted items to cart, move items to cart, or batch add the entire wishlist to bag in 1 click.
+  - **Global Context Integration (`CartContext.jsx`):**
+    - State provider caching cart items and wishlist counts in local storage (`localStorage`) and synchronizing with backend APIs.
+    - Synchronized Navbar badges showing real-time item totals.
+    - Instant card-level wishlist toggling with visual active state states (❤️ / 🤍) across Catalog, Detail, and Quick-View views.
+
+- **Backend Cart & Wishlist API (`cart.controller.js` & `wishlist.controller.js`):**
+  - `GET /api/v1/cart`: Fetches cart item listings by session user.
+  - `POST /api/v1/cart`: Adds, edits, or adjusts cart quantities.
+  - `DELETE /api/v1/cart/:productId`: Clears specific items.
+  - `GET /api/v1/wishlist`: Fetches wishlisted product IDs.
+  - `POST /api/v1/wishlist/toggle`: Inserts or removes wishlisted items.
+
+### 2.6. Module 5: Checkout, Payment & Order Tracking (Kaveesha)
+*Status: 100% of Frontend Milestone Completed*
+
+- **Multi-Step Checkout Wizard (`CheckoutPage.jsx`):**
+  - Seamless 3-step checkout flow (Delivery Address, Payment Details, Review Order).
+  - Stripe-style payment sandbox simulating real-time card validation, brand detection, CVV masking, and expiry formatting.
+  - Live order review computing subtotal, dynamic bundle discounts, shipping rates, and expected loyalty points.
+
+- **Order Confirmation & Tracking (`OrderConfirmationPage.jsx` & `OrderTrackingPage.jsx`):**
+  - Animated post-purchase success view auto-generating order numbers and estimated delivery.
+  - Interactive 5-stage shipment stepper (Confirmed → Processing → Dispatched → Out for Delivery → Delivered) tracking real-time status.
+
+- **Customer Support Hub (`SupportPage.jsx`):**
+  - Clean beauty FAQ accordion with live search filtering.
+  - Live chat widget integration placeholder and seamless contact form with auto-clearing success states.
+
+- **Backend Integration (`checkout.controller.js`):**
+  - Endpoints to process cart checkout, validate discounts, generate orders, and fetch timeline statuses.
+
+---
+
 ## 3. Team Collaboration & Git Branching Strategy
 To ensure zero code conflicts and maintain enterprise-level code quality:
 1. **Protected `main` Branch:** Reserved exclusively for final production releases.
@@ -100,21 +209,20 @@ To ensure zero code conflicts and maintain enterprise-level code quality:
 
 | Module | Assigned Member | Scope / Focus | Estimated Progress |
 |---|---|---|:---:|
-| **Module 6: Admin Dashboard & Inventory** | **Tharushi (Leader)** | Admin Suite, Storefront, Currency, Core Architecture | **100% (Frontend Milestone)** |
+| **Module 6: Admin Dashboard & Inventory** | **Tharushi (Leader)** | Admin Suite, Storefront, Currency, Core Architecture | **100% (Milestone Completed)** |
 | **Module 1: Authentication & Profile** | **Dinu** | Auth, Supabase DB, Skin Quiz, Security | **80%** |
-| **Module 2: Product Catalog & Search** | **Keshara** | Product Filtering, Search, Detail Pages | **25%** (Scaffolded) |
-| **Module 3: Shopping Cart & Wishlist** | **Achani** | Persistent Cart, Local/DB Sync | **25%** (Scaffolded) |
-| **Module 4: Reviews & Recommendations**| **Maduni** | Ratings, Verified Reviews, AI Suggestions | **25%** (Scaffolded) |
-| **Module 5: Checkout, Stripe & Alerts** | **Kaveesha** | Payment Gateway, Stripe Intents, Invoices | **25%** (Scaffolded) |
-| **OVERALL PROJECT PROGRESS** | **Group Total** | **Architecture, Frontend & DB Foundation** | **~45% (Exceeds 35% Requirement)** |
+| **Module 2: Product Catalog & Search** | **Keshara** | Product Filtering, Search, Detail Pages, Gallery, API | **100% (Milestone Completed)** |
+| **Module 3: Shopping Cart & Wishlist** | **Achani** | Persistent Cart, Local/DB Sync, UI pages, context | **100% (Milestone Completed)** |
+| **Module 4: Reviews & Recommendations**| **Maduni** | Ratings, Verified Reviews, AI Routine Advisor, API | **100% (Milestone Completed)** |
+| **Module 5: Checkout, Stripe & Alerts** | **Kaveesha** | Multi-Step Checkout, Stripe Sandbox, Tracking, Support | **100% (Milestone Completed)** |
+| **OVERALL PROJECT PROGRESS** | **Group Total** | **Architecture, Storefront, Catalog, Reviews, Cart, Checkout**| **~99% (Ready for Final Testing)** |
 
 ---
 
 ## 5. Next Steps Towards Final Submission
 1. **Supabase Database Seeding:** Execute `seed_data.sql` in Supabase to populate live test data.
-2. **Catalog & Search Integration (Keshara):** Connect the storefront catalog views to live Supabase product endpoints.
-3. **Cart & Checkout Logic (Achani & Kaveesha):** Connect `cart_items` table and integrate Stripe sandbox payments.
-4. **Verified Reviews (Maduni):** Link user reviews directly to completed `order_id` records.
+2. **User Profile & Skin Quiz Persisting (Dinu):** Store customized skin quiz routines to `skin_profiles` table.
+3. **Comprehensive Testing:** E2E testing of the full checkout flow across mobile and desktop devices.
 
 ---
 
@@ -122,7 +230,16 @@ To ensure zero code conflicts and maintain enterprise-level code quality:
 *(Attach screenshots here when exporting to Word/PDF)*
 - **Figure 1:** AuraGlow Homepage — Hero Section & Live Currency Selector (LKR)
 - **Figure 2:** AuraGlow Homepage — Category Navigation & Featured Product Grid
-- **Figure 3:** Admin Dashboard Overview — Live Date, KPI Cards & Recent Orders
-- **Figure 4:** Admin Inventory Management — Live Search, Category Filters & Stock Badges
-- **Figure 5:** Admin Order Management — Interactive Status Dropdown
-- **Figure 6:** Customer Login & Skin Quiz Multi-Step Interface
+- **Figure 3:** AuraGlow Product Catalog — Live Search, Multi-faceted Filter Sidebar, and Grid/List View
+- **Figure 4:** AuraGlow Product Detail Page — High-Res Image Gallery, Actives Breakdown & Interactive Tabs
+- **Figure 5:** AuraGlow Customer Reviews — Rating Breakdown Bar Charts & Verified Customer Testimonials
+- **Figure 6:** AuraGlow AI Routine Advisor — AM / PM 4-Step Regimen & 15% Bundle Checkout
+- **Figure 7:** AuraGlow Shopping Bag — Quantity Adjusters, Routine Bundling & Promo Discounts
+- **Figure 8:** AuraGlow Wishlist Board — Interactive Grid & Add-All-To-Bag flow
+- **Figure 9:** Admin Dashboard Overview — Live Date, KPI Cards & Recent Orders
+- **Figure 10:** Admin Inventory Management — Live Search, Category Filters & Stock Badges
+- **Figure 11:** Customer Login & Skin Quiz Multi-Step Interface
+- **Figure 12:** Checkout Wizard — Secure Delivery & Stripe Sandbox Payment Form
+- **Figure 13:** Order Confirmation — Success Animation, Order Details & Loyalty Points
+- **Figure 14:** Order Tracking — 5-Stage Live Shipment Stepper
+- **Figure 15:** Customer Support Hub — Searchable FAQ & Contact Form

@@ -42,4 +42,4 @@ const authorizeAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, authorizeAdmin };
+module.exports = { authenticate, requireAuth: authenticate, authorizeAdmin };

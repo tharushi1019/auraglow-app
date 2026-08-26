@@ -105,18 +105,19 @@ function ProductCard({ p }) {
           SALE
         </div>
       )}
-      <div className="product-card__image-wrap" style={{ aspectRatio: '1/1', position: 'relative', width: '100%', overflow: 'hidden' }}>
-        <img src={p.image} alt={p.name} className="product-card__image" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      <Link to={`/products/${p.id}`} className="product-card__image-wrap" style={{ aspectRatio: '1/1', position: 'relative', width: '100%', overflow: 'hidden', display: 'block' }}>
+        <img src={p.image} alt={p.name} className="product-card__image" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', transform: hovered ? 'scale(1.08)' : 'scale(1)', transition: 'transform 0.4s ease' }} />
         {hovered && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(13,13,15,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)', transition: 'all 0.3s ease' }}>
-            <button className="btn btn-primary btn-sm" style={{ backdropFilter: 'blur(8px)' }}>Add to Cart</button>
-            <button className="btn btn-ghost btn-sm btn-icon" style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)' }}>♡</button>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(13,13,15,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)', transition: 'all 0.3s ease' }}>
+            <span className="btn btn-primary btn-sm" style={{ backdropFilter: 'blur(8px)' }}>View Details</span>
           </div>
         )}
-      </div>
+      </Link>
       <div className="product-card__body">
         <p className="product-card__brand">{p.brand}</p>
-        <h3 className="product-card__name">{p.name}</h3>
+        <Link to={`/products/${p.id}`} style={{ textDecoration: 'none' }}>
+          <h3 className="product-card__name" style={{ color: 'var(--color-text-primary)' }}>{p.name}</h3>
+        </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
           <Stars count={p.rating} />
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{p.rating} ({(p.reviewCount ?? p.reviews ?? 0).toLocaleString()})</span>
@@ -154,6 +155,8 @@ export default function Home() {
         alignItems: 'center',
         gap: 0,
         overflow: 'hidden',
+        background: 'var(--gradient-hero)',
+
       }}>
         {/* Left copy */}
         <div className="slide-in-left" style={{ padding: 'var(--space-16) var(--space-12)', background: 'var(--gradient-hero)' }}>
@@ -203,7 +206,7 @@ export default function Home() {
           {/* Floating review card */}
           <div className="float" style={{ animationDelay: '1.5s', position: 'absolute', top: '80px', right: '32px', background: 'rgba(13,13,15,0.85)', backdropFilter: 'blur(20px)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-4) var(--space-5)', maxWidth: '220px' }}>
             <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
-              {[1,2,3,4,5].map(i => <span key={i} style={{ color: 'var(--color-accent-gold)', fontSize: '12px' }}>★</span>)}
+              {[1, 2, 3, 4, 5].map(i => <span key={i} style={{ color: 'var(--color-accent-gold)', fontSize: '12px' }}>★</span>)}
             </div>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: 'var(--space-2)' }}>"My skin has never looked better! Genuinely obsessed."</p>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>— Sasha R.</p>
@@ -236,7 +239,7 @@ export default function Home() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-4)' }}>
           {categories.map((cat) => (
-            <Link key={cat.name} to="/products" className="category-card" style={{ textDecoration: 'none', borderRadius: 'var(--radius-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '3/4', display: 'block', border: `1px solid ${cat.border}` }}>
+            <Link key={cat.name} to={`/products?category=${cat.name.toLowerCase()}`} className="category-card" style={{ textDecoration: 'none', borderRadius: 'var(--radius-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '3/4', display: 'block', border: `1px solid ${cat.border}` }}>
               <img src={cat.img} alt={cat.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }} />
               <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, rgba(13,13,15,0.92) 30%, ${cat.color} 100%)` }} />
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 'var(--space-5)' }}>
@@ -347,7 +350,7 @@ export default function Home() {
           {reviews.map((r, i) => (
             <div key={i} className="card">
               <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
-                {[1,2,3,4,5].map(i => <span key={i} style={{ color: i <= r.rating ? 'var(--color-accent-gold)' : 'var(--color-text-muted)', fontSize: '16px' }}>★</span>)}
+                {[1, 2, 3, 4, 5].map(i => <span key={i} style={{ color: i <= r.rating ? 'var(--color-accent-gold)' : 'var(--color-text-muted)', fontSize: '16px' }}>★</span>)}
               </div>
               <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', lineHeight: 1.8, marginBottom: 'var(--space-5)', fontStyle: 'italic' }}>"{r.text}"</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--color-border)' }}>
