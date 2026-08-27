@@ -90,6 +90,12 @@ export const products = [
     tags: ['lipstick', 'matte', 'long-lasting'],
     badge: '🐰 Cruelty-Free',
     badgeClass: 'badge-cruelty-free',
+    shades: [
+      { name: 'Rose Petal', hex: '#b75b6d', undertone: 'Cool' },
+      { name: 'Warm Nude', hex: '#c98a75', undertone: 'Warm' },
+      { name: 'Berry Mauve', hex: '#873c53', undertone: 'Neutral' },
+      { name: 'Scarlet Glow', hex: '#a62639', undertone: 'Warm' }
+    ],
     description: 'Intensely pigmented matte lipstick with a comfortable, all-day wear formula. No drying, no fading.',
     ingredients: ['Shea Butter', 'Vitamin E', 'Jojoba Oil'],
     image: 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?auto=format&fit=crop&w=500&q=80',
