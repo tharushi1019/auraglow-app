@@ -33,11 +33,11 @@ export default function Register() {
   return (
     <>
       <CosmeticDoodles />
-      <div className="container" style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div className="auth-container">
         <h1 className="page-title">Create Your Account</h1>
         <p className="page-subtitle">Join AuraGlow to get personalized clean beauty recommendations.</p>
 
-        <div className="card" style={{ backdropFilter: 'blur(20px)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,180,160,0.15)', boxShadow: '0 8px 32px rgba(0,0,0,0.3), 0 0 60px rgba(232,180,160,0.06)' }}>
+        <div className="auth-card">
           {error && <div className="alert-banner">{error}</div>}
           <form onSubmit={handleSubmit}>
             <div className="form-group">
