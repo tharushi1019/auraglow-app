@@ -26,34 +26,31 @@ app.get('/health', (req, res) => {
 // ── API Routes (uncomment as each module is completed) ───────────────────────
 
 // Module 1 — Dinu (Auth & Profile)
-// const authRoutes = require('./routes/auth.routes');
-// const userRoutes = require('./routes/user.routes');
-// const skinProfileRoutes = require('./routes/skinProfile.routes');
-// app.use('/api/v1/auth', authRoutes);
-// app.use('/api/v1/users', userRoutes);
-// app.use('/api/v1/skin-profile', skinProfileRoutes);
+const authRoutes = require('./routes/auth.routes');
+app.use('/api/v1/auth', authRoutes);
 
 // Module 2 — Keshara (Product Catalog)
-// const productRoutes = require('./routes/product.routes');
-// app.use('/api/v1/products', productRoutes);
+const productRoutes = require('./routes/product.routes');
+app.use('/api/v1/products', productRoutes);
 
 // Module 3 — Achani (Cart & Wishlist)
-// const cartRoutes = require('./routes/cart.routes');
-// const wishlistRoutes = require('./routes/wishlist.routes');
-// app.use('/api/v1/cart', cartRoutes);
-// app.use('/api/v1/wishlist', wishlistRoutes);
+const cartRoutes = require('./routes/cart.routes');
+const wishlistRoutes = require('./routes/wishlist.routes');
+app.use('/api/v1/cart', cartRoutes);
+app.use('/api/v1/wishlist', wishlistRoutes);
 
 // Module 4 — Maduni (Reviews & Recommendations)
-// const reviewRoutes = require('./routes/review.routes');
-// app.use('/api/v1/reviews', reviewRoutes);
+const reviewRoutes = require('./routes/review.routes');
+app.use('/api/v1/reviews', reviewRoutes);
+app.use('/api/v1/recommendations', reviewRoutes);
 
-// Module 5 — Kaveesha (Checkout & Stripe)
-// const checkoutRoutes = require('./routes/checkout.routes');
-// const orderRoutes = require('./routes/order.routes');
-// const supportRoutes = require('./routes/support.routes');
-// app.use('/api/v1/checkout', checkoutRoutes);
-// app.use('/api/v1/orders', orderRoutes);
-// app.use('/api/v1/support', supportRoutes);
+// Module 5 — Kaveesha (Checkout & Orders)
+const checkoutRoutes = require('./routes/checkout.routes');
+app.use('/api/v1/checkout', checkoutRoutes);
+app.use('/api/v1/orders', (req, res, next) => {
+  req.url = '/orders' + req.url;
+  checkoutRoutes(req, res, next);
+});
 
 // Module 6 — Tharushi (Admin Dashboard)
 // const adminRoutes = require('./routes/admin.routes');

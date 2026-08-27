@@ -95,7 +95,6 @@ function ProductCard({ p }) {
       className="product-card"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{ position: 'relative' }}
     >
       {/* Match badge */}
       <div style={{ position: 'absolute', top: '12px', left: '12px', zIndex: 2, background: 'rgba(13,13,15,0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(184,169,217,0.4)', borderRadius: 'var(--radius-full)', padding: '3px 10px', fontSize: 'var(--text-xs)', fontWeight: '600', color: 'var(--color-accent-lavender)' }}>
@@ -106,18 +105,19 @@ function ProductCard({ p }) {
           SALE
         </div>
       )}
-      <div className="product-card__image-wrap" style={{ aspectRatio: '1/1', position: 'relative', width: '100%', overflow: 'hidden' }}>
-        <img src={p.image} alt={p.name} className="product-card__image" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      <Link to={`/products/${p.id}`} className="product-card__image-wrap" style={{ aspectRatio: '1/1', position: 'relative', width: '100%', overflow: 'hidden', display: 'block' }}>
+        <img src={p.image} alt={p.name} className="product-card__image" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', transform: hovered ? 'scale(1.08)' : 'scale(1)', transition: 'transform 0.4s ease' }} />
         {hovered && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(13,13,15,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)', transition: 'all 0.3s ease' }}>
-            <button className="btn btn-primary btn-sm" style={{ backdropFilter: 'blur(8px)' }}>Add to Cart</button>
-            <button className="btn btn-ghost btn-sm btn-icon" style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)' }}>♡</button>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(13,13,15,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)', transition: 'all 0.3s ease' }}>
+            <span className="btn btn-primary btn-sm" style={{ backdropFilter: 'blur(8px)' }}>View Details</span>
           </div>
         )}
-      </div>
+      </Link>
       <div className="product-card__body">
         <p className="product-card__brand">{p.brand}</p>
-        <h3 className="product-card__name">{p.name}</h3>
+        <Link to={`/products/${p.id}`} style={{ textDecoration: 'none' }}>
+          <h3 className="product-card__name" style={{ color: 'var(--color-text-primary)' }}>{p.name}</h3>
+        </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
           <Stars count={p.rating} />
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{p.rating} ({(p.reviewCount ?? p.reviews ?? 0).toLocaleString()})</span>
@@ -155,31 +155,33 @@ export default function Home() {
         alignItems: 'center',
         gap: 0,
         overflow: 'hidden',
+        background: 'var(--gradient-hero)',
+
       }}>
         {/* Left copy */}
-        <div style={{ padding: 'var(--space-16) var(--space-12)', background: 'var(--gradient-hero)' }}>
+        <div className="slide-in-left" style={{ padding: 'var(--space-16) var(--space-12)', background: 'var(--gradient-hero)' }}>
           <div style={{ marginBottom: 'var(--space-4)', display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', background: 'rgba(232,180,160,0.1)', border: '1px solid rgba(232,180,160,0.3)', borderRadius: 'var(--radius-full)', padding: '6px 16px', fontSize: 'var(--text-xs)', fontWeight: '600', color: 'var(--color-accent-rose)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             ✨ New Arrivals — Summer Glow Collection
           </div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.8rem, 5vw, 4.5rem)', fontWeight: '800', lineHeight: 1.05, marginBottom: 'var(--space-6)', letterSpacing: '-0.02em' }}>
             <span style={{ color: 'var(--color-text-primary)' }}>Beauty that</span><br />
-            <span style={{ background: 'var(--gradient-text)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>knows your skin.</span>
+            <span className="shimmer-text">knows your skin.</span>
           </h1>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-md)', marginBottom: 'var(--space-8)', maxWidth: '480px', lineHeight: 1.7 }}>
             Personalized clean beauty powered by your unique skin profile. Vegan, cruelty-free, and made with ingredients your skin will love.
           </p>
           <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', marginBottom: 'var(--space-10)' }}>
-            <Link to="/skin-quiz" className="btn btn-primary btn-lg btn-pill">
+            <Link to="/skin-quiz" className="btn btn-primary btn-lg btn-pill glow-pulse">
               ✨ Take the Skin Quiz
             </Link>
-            <Link to="/products" className="btn btn-secondary btn-lg btn-pill">
+            <Link to="/products" className="btn btn-secondary btn-lg btn-pill hover-lift">
               Shop All Products
             </Link>
           </div>
           {/* Trust Badges */}
           <div style={{ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap' }}>
-            {['🌱 100% Vegan', '🐰 Cruelty-Free', '♻️ Eco Packaging', '🔬 Dermatologist Tested'].map(badge => (
-              <div key={badge} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: '500' }}>
+            {['🌱 100% Vegan', '🐰 Cruelty-Free', '♻️ Eco Packaging', '🔬 Dermatologist Tested'].map((badge, idx) => (
+              <div key={badge} className={`fade-in-up delay-${idx + 1}`} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: '500' }}>
                 {badge}
               </div>
             ))}
@@ -187,7 +189,7 @@ export default function Home() {
         </div>
 
         {/* Right hero image collage */}
-        <div style={{ position: 'relative', height: 'calc(100vh - var(--nav-height))', overflow: 'hidden' }}>
+        <div className="slide-in-right" style={{ position: 'relative', height: 'calc(100vh - var(--nav-height))', overflow: 'hidden' }}>
           <img
             src="https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=900&q=85"
             alt="AuraGlow Hero"
@@ -196,15 +198,15 @@ export default function Home() {
           {/* Gradient overlay on right */}
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, var(--color-bg-primary) 0%, transparent 20%), linear-gradient(to top, rgba(13,13,15,0.6) 0%, transparent 50%)' }} />
           {/* Floating stat card */}
-          <div style={{ position: 'absolute', bottom: '80px', left: '32px', background: 'rgba(13,13,15,0.85)', backdropFilter: 'blur(20px)', border: '1px solid rgba(232,180,160,0.3)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-4) var(--space-5)' }}>
+          <div className="float" style={{ position: 'absolute', bottom: '80px', left: '32px', background: 'rgba(13,13,15,0.85)', backdropFilter: 'blur(20px)', border: '1px solid rgba(232,180,160,0.3)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-4) var(--space-5)' }}>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: '4px' }}>SKIN MATCH SCORE</p>
             <p style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: '800', background: 'var(--gradient-text)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>96%</p>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>Matched to your skin profile ✨</p>
           </div>
           {/* Floating review card */}
-          <div style={{ position: 'absolute', top: '80px', right: '32px', background: 'rgba(13,13,15,0.85)', backdropFilter: 'blur(20px)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-4) var(--space-5)', maxWidth: '220px' }}>
+          <div className="float" style={{ animationDelay: '1.5s', position: 'absolute', top: '80px', right: '32px', background: 'rgba(13,13,15,0.85)', backdropFilter: 'blur(20px)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-4) var(--space-5)', maxWidth: '220px' }}>
             <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
-              {[1,2,3,4,5].map(i => <span key={i} style={{ color: 'var(--color-accent-gold)', fontSize: '12px' }}>★</span>)}
+              {[1, 2, 3, 4, 5].map(i => <span key={i} style={{ color: 'var(--color-accent-gold)', fontSize: '12px' }}>★</span>)}
             </div>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: 'var(--space-2)' }}>"My skin has never looked better! Genuinely obsessed."</p>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>— Sasha R.</p>
@@ -236,12 +238,9 @@ export default function Home() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-4)' }}>
-          {categories.map(cat => (
-            <Link key={cat.name} to="/products" style={{ textDecoration: 'none', borderRadius: 'var(--radius-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '3/4', display: 'block', border: `1px solid ${cat.border}`, transition: 'transform 250ms ease, box-shadow 250ms ease' }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-6px)'; e.currentTarget.style.boxShadow = '0 20px 60px rgba(0,0,0,0.4)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-            >
-              <img src={cat.img} alt={cat.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 400ms ease' }} />
+          {categories.map((cat) => (
+            <Link key={cat.name} to={`/products?category=${cat.name.toLowerCase()}`} className="category-card" style={{ textDecoration: 'none', borderRadius: 'var(--radius-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '3/4', display: 'block', border: `1px solid ${cat.border}` }}>
+              <img src={cat.img} alt={cat.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }} />
               <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, rgba(13,13,15,0.92) 30%, ${cat.color} 100%)` }} />
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 'var(--space-5)' }}>
                 <div style={{ fontSize: '28px', marginBottom: 'var(--space-2)' }}>{cat.emoji}</div>
@@ -263,12 +262,12 @@ export default function Home() {
           <Link to="/products" className="btn btn-ghost btn-sm btn-pill">View All Products →</Link>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-6)' }}>
-          {featured.map((p, i) => <ProductCard key={i} p={p} />)}
+          {featured.map(p => <ProductCard key={p.id} p={p} />)}
         </div>
       </section>
 
       {/* ── 6. SKIN QUIZ PROMO BANNER ──────────────────────────────────────── */}
-      <section style={{ margin: 'var(--space-16) 0', background: 'linear-gradient(135deg, rgba(232,180,160,0.08) 0%, rgba(184,169,217,0.08) 100%)', border: 'none', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', padding: 'var(--space-16) var(--space-10)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+      <section className="fade-in" style={{ margin: 'var(--space-16) 0', background: 'linear-gradient(135deg, rgba(232,180,160,0.08) 0%, rgba(184,169,217,0.08) 100%)', border: 'none', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', padding: 'var(--space-16) var(--space-10)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-50%', left: '50%', transform: 'translateX(-50%)', width: '600px', height: '600px', background: 'radial-gradient(ellipse, rgba(232,180,160,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <p style={{ fontSize: 'var(--text-xs)', fontWeight: '600', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--color-accent-rose)', marginBottom: 'var(--space-4)', position: 'relative' }}>Personalized for You</p>
         <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: '800', marginBottom: 'var(--space-4)', position: 'relative' }}>
@@ -351,7 +350,7 @@ export default function Home() {
           {reviews.map((r, i) => (
             <div key={i} className="card">
               <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
-                {[1,2,3,4,5].map(i => <span key={i} style={{ color: i <= r.rating ? 'var(--color-accent-gold)' : 'var(--color-text-muted)', fontSize: '16px' }}>★</span>)}
+                {[1, 2, 3, 4, 5].map(i => <span key={i} style={{ color: i <= r.rating ? 'var(--color-accent-gold)' : 'var(--color-text-muted)', fontSize: '16px' }}>★</span>)}
               </div>
               <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', lineHeight: 1.8, marginBottom: 'var(--space-5)', fontStyle: 'italic' }}>"{r.text}"</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--color-border)' }}>
