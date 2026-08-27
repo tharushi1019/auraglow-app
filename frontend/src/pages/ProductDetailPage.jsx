@@ -21,6 +21,7 @@ export default function ProductDetailPage() {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [selectedShade, setSelectedShade] = useState(null);
   const [activeTab, setActiveTab] = useState('description');
   const [toastMessage, setToastMessage] = useState(null);
   const [added, setAdded] = useState(false);
@@ -36,6 +37,11 @@ export default function ProductDetailPage() {
         setProduct(null);
       } else {
         setProduct(data);
+        if (data.shades && data.shades.length > 0) {
+          setSelectedShade(data.shades[0]);
+        } else {
+          setSelectedShade(null);
+        }
         const related = await getRelatedProducts(data.id);
         setRelatedProducts(related);
       }
@@ -52,8 +58,9 @@ export default function ProductDetailPage() {
   const handleAddToCart = () => {
     if (!product || product.stock === 0) return;
     setAdded(true);
-    addToCart(product, quantity);
-    showToast(`🌸 Added ${quantity} × "${product.name}" to your shopping bag!`);
+    const itemToAdd = selectedShade ? { ...product, selectedShade: selectedShade.name } : product;
+    addToCart(itemToAdd, quantity);
+    showToast(`🌸 Added ${quantity} × "${product.name}" ${selectedShade ? `(${selectedShade.name})` : ''} to your bag!`);
     setTimeout(() => setAdded(false), 2000);
   };
 
@@ -269,6 +276,68 @@ export default function ProductDetailPage() {
             <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-base)', lineHeight: 1.6, margin: 0 }}>
               {product.description}
             </p>
+
+            {/* Shade Selection Assistant (For makeup / products with shades) */}
+            {product.shades && product.shades.length > 0 && (
+              <div style={{
+                background: 'var(--color-bg-card)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-lg)',
+                padding: 'var(--space-4)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', color: 'var(--color-text-secondary)' }}>
+                    🎨 Shade Selection Assistant
+                  </span>
+                  {selectedShade && (
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-accent-rose)', fontWeight: '600' }}>
+                      {selectedShade.name} • {selectedShade.undertone} Undertone
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                  {product.shades.map((shade) => {
+                    const isSelected = selectedShade?.name === shade.name;
+                    return (
+                      <button
+                        key={shade.name}
+                        onClick={() => setSelectedShade(shade)}
+                        type="button"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: isSelected ? 'rgba(232, 180, 160, 0.15)' : 'var(--color-bg-secondary)',
+                          border: isSelected ? '2px solid var(--color-accent-rose)' : '1px solid var(--color-border)',
+                          borderRadius: 'var(--radius-full)',
+                          padding: '6px 14px',
+                          cursor: 'pointer',
+                          transition: 'all var(--transition-fast)',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            background: shade.hex,
+                            display: 'inline-block',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                          }}
+                        />
+                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: isSelected ? '700' : '500', color: 'var(--color-text-primary)' }}>
+                          {shade.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Actions: Quantity + Add to Bag + Buy Now + Wishlist */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
