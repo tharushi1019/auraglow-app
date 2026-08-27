@@ -17,8 +17,11 @@
 
 html {
   font-size: 16px;
-  scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
 }
 
 body {
@@ -321,6 +324,38 @@ input:disabled, textarea:disabled, select:disabled {
   color: var(--color-error);
 }
 
+/* Order / general status badges */
+.badge-warning {
+  background: rgba(240, 200, 122, 0.12);
+  border-color: rgba(240, 200, 122, 0.3);
+  color: var(--color-warning);
+}
+
+.badge-info {
+  background: rgba(184, 169, 217, 0.12);
+  border-color: rgba(184, 169, 217, 0.3);
+  color: var(--color-accent-lavender);
+}
+
+.badge-success {
+  background: rgba(126, 200, 160, 0.12);
+  border-color: rgba(126, 200, 160, 0.3);
+  color: var(--color-success);
+}
+
+.badge-error {
+  background: rgba(232, 122, 122, 0.12);
+  border-color: rgba(232, 122, 122, 0.3);
+  color: var(--color-error);
+}
+
+.badge-pending {
+  background: rgba(212, 175, 130, 0.12);
+  border-color: rgba(212, 175, 130, 0.3);
+  color: var(--color-accent-peach);
+}
+
+
 /* ==========================================================================
    LOADING SKELETON ANIMATION
    ========================================================================== */
@@ -337,27 +372,111 @@ input:disabled, textarea:disabled, select:disabled {
 }
 
 /* ==========================================================================
-   FADE-IN ANIMATION (Use on page mounts)
+   ANIMATION & MICRO-INTERACTIONS
    ========================================================================== */
 
+/* Fade In Up */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
 .fade-in-up {
-  animation: fadeInUp var(--transition-slow) ease forwards;
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.fade-in-up-delay-1 { animation-delay: 100ms; }
-.fade-in-up-delay-2 { animation-delay: 200ms; }
-.fade-in-up-delay-3 { animation-delay: 300ms; }
+/* Fade In */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade-in {
+  animation: fadeIn 0.35s ease both;
+}
+
+/* Scale In (modals, dialogs) */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.scale-in {
+  animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Float (subtle organic ambient float) */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-6px); }
+}
+.float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Glow Pulse (CTA buttons) */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(232, 180, 160, 0.25); }
+  50%      { box-shadow: 0 6px 28px rgba(232, 180, 160, 0.55); }
+}
+.glow-pulse {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+/* Shimmer text */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.shimmer-text {
+  background: linear-gradient(90deg, var(--color-accent-rose) 0%, var(--color-accent-lavender) 40%, var(--color-accent-gold) 70%, var(--color-accent-rose) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
+/* Smooth Category & Card Hovers */
+.category-card {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.category-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-border-accent) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4), var(--shadow-glow-accent);
+}
+.category-card:hover img {
+  transform: scale(1.06);
+}
+
+/* Hover Lift utility */
+.hover-lift {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+/* Page-level fade-in (used by WithLayout in App.jsx on route changes) */
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: pageFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 
 /* ==========================================================================
    RESPONSIVE BREAKPOINTS
