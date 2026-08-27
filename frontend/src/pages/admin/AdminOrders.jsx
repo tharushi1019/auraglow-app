@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrency } from '@/context/CurrencyContext';
+import { supabase } from '@/lib/supabase';
 
 const initialOrders = [
   {
@@ -79,18 +80,75 @@ const initialOrders = [
 const statusOptions = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 
 export default function AdminOrders() {
-  const [orders, setOrders] = useState(initialOrders);
+  const [orders, setOrders]   = useState(initialOrders);
+  const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState(null);
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [activeOrderModal, setActiveOrderModal] = useState(null);
-  const { formatPrice } = useCurrency();
+  const { formatPrice }       = useCurrency();
 
-  useEffect(() => {
-    document.title = 'AuraGlow Admin — Order Fulfillment';
-  }, []);
+  useEffect(() => { document.title = 'AuraGlow Admin — Orders'; }, []);
 
-  const handleStatusChange = (id, newStatus) => {
+  // Fetch live orders from Supabase
+  useEffect(() => { fetchOrders(); }, []);
+
+  async function fetchOrders() {
+    setLoading(true);
+    const { data, error: err } = await supabase
+      .from('orders')
+      .select(`
+        id, status, total_amount, contact_email, created_at, shipping_address,
+        users ( name )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (err) {
+      console.error('[AdminOrders] Supabase fetch error:', err.message);
+      setDbError('Could not reach database — showing demo data.');
+      // Keep initialOrders as fallback
+    } else if (data && data.length > 0) {
+      // Map Supabase rows to component shape
+      const mapped = data.map(o => ({
+        id:            o.id.slice(0, 8).toUpperCase(),
+        _uuid:         o.id,
+        customer:      o.users?.name || o.contact_email,
+        email:         o.contact_email,
+        phone:         o.shipping_address?.phone || '—',
+        date:          new Date(o.created_at).toLocaleString('en-GB'),
+        amount:        parseFloat(o.total_amount),
+        status:        o.status.charAt(0).toUpperCase() + o.status.slice(1),
+        paymentMethod: 'Stripe',
+        address:       o.shipping_address
+          ? `${o.shipping_address.street || ''}, ${o.shipping_address.city || ''}`
+          : '—',
+        items: [],
+      }));
+      setOrders(mapped);
+    }
+    setLoading(false);
+  }
+
+  const handleStatusChange = async (id, newStatus) => {
+    // Optimistic UI update
+    const previousOrders = [...orders];
     setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
+    
+    // Attempt database update
+    const orderToUpdate = orders.find(o => o.id === id);
+    if (orderToUpdate?._uuid) {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus.toLowerCase() })
+        .eq('id', orderToUpdate._uuid);
+        
+      if (error) {
+        console.error('Status update failed', error);
+        setOrders(previousOrders); // Rollback
+      }
+    }
+    
     if (activeOrderModal && activeOrderModal.id === id) {
       setActiveOrderModal({ ...activeOrderModal, status: newStatus });
     }

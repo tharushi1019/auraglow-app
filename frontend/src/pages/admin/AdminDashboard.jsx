@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCurrency } from '@/context/CurrencyContext';
-import { products } from '@/data/mockData';
+import { products as mockProducts } from '@/data/mockData';
+import { supabase } from '@/lib/supabase';
 
 const revenueDataByPeriod = {
   today: {
@@ -84,21 +85,61 @@ const liveActivity = [
 
 export default function AdminDashboard() {
   const { formatPrice } = useCurrency();
-  const [timeframe, setTimeframe] = useState('today');
-  const [now, setNow] = useState(new Date());
+  const [timeframe, setTimeframe]     = useState('today');
+  const [now, setNow]                 = useState(new Date());
   const [activeHoverBar, setActiveHoverBar] = useState(null);
+  // Live DB stats
+  const [liveStats, setLiveStats] = useState({
+    lowStockCount:   mockProducts.filter(p => p.stock > 0 && p.stock < 20).length,
+    outOfStockCount: mockProducts.filter(p => p.stock === 0).length,
+    productCount:    mockProducts.length,
+    orderCount:      null,
+    totalRevenue:    null,
+  });
 
   useEffect(() => {
     document.title = 'AuraGlow Admin — Executive Dashboard';
     const timer = setInterval(() => setNow(new Date()), 60000);
+    fetchLiveStats();
     return () => clearInterval(timer);
   }, []);
 
-  const todayFormatted = now.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const currentData = revenueDataByPeriod[timeframe];
+  async function fetchLiveStats() {
+    try {
+      const [prodRes, orderRes] = await Promise.all([
+        supabase.from('products').select('id, stock_quantity').eq('is_active', true),
+        supabase.from('orders').select('id, total_amount, status'),
+      ]);
 
-  const lowStockCount = products.filter(p => p.stock > 0 && p.stock < 20).length;
-  const outOfStockCount = products.filter(p => p.stock === 0).length;
+      if (!prodRes.error && prodRes.data) {
+        setLiveStats(prev => ({
+          ...prev,
+          lowStockCount:   prodRes.data.filter(p => p.stock_quantity > 0 && p.stock_quantity < 20).length,
+          outOfStockCount: prodRes.data.filter(p => p.stock_quantity === 0).length,
+          productCount:    prodRes.data.length,
+        }));
+      }
+
+      if (!orderRes.error && orderRes.data) {
+        const revenue = orderRes.data
+          .filter(o => ['paid','processing','packed','shipped','delivered'].includes(o.status))
+          .reduce((sum, o) => sum + parseFloat(o.total_amount), 0);
+        setLiveStats(prev => ({
+          ...prev,
+          orderCount:   orderRes.data.length,
+          totalRevenue: revenue,
+        }));
+      }
+    } catch (e) {
+      console.error('[AdminDashboard] Stats fetch error:', e);
+    }
+  }
+
+  const todayFormatted = now.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const currentData    = revenueDataByPeriod[timeframe];
+
+  const lowStockCount  = liveStats.lowStockCount;
+  const outOfStockCount = liveStats.outOfStockCount;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>

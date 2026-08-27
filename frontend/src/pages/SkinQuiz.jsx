@@ -72,11 +72,11 @@ export default function SkinQuiz() {
   return (
     <>
       <CosmeticDoodles />
-      <div className="container" style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div className="auth-container">
         <h1 className="page-title">Discover Your Skin</h1>
         <p className="page-subtitle">A quick 3-step quiz to personalize your recommendations.</p>
 
-        <div className="card" style={glassCard}>
+        <div className="auth-card">
           <div className="quiz-progress">
             {STEPS.map((_, i) => (
               <div key={i} className={`quiz-progress-dot ${i <= step ? 'active' : ''}`} />

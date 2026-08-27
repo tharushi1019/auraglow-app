@@ -22,11 +22,11 @@ export default function Profile() {
   return (
     <>
       <CosmeticDoodles />
-      <div className="container" style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div className="auth-container-wide">
         <h1 className="page-title">Your Profile</h1>
         <p className="page-subtitle">Your account details and skin profile.</p>
 
-        <div className="card" style={glassCard}>
+        <div className="auth-card" style={{ marginBottom: 'var(--space-6)' }}>
           <div className="profile-row">
             <span className="profile-label">Name</span>
             <span className="profile-value">{user?.name}</span>
@@ -43,7 +43,7 @@ export default function Profile() {
           </div>
         </div>
 
-        <div className="card" style={glassCard}>
+        <div className="auth-card" style={{ marginBottom: 'var(--space-6)' }}>
           <h3 style={{ marginBottom: '1rem', fontFamily: 'var(--font-heading)' }}>Skin Profile</h3>
           {skinProfile ? (
             <>
