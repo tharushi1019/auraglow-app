@@ -1,0 +1,183 @@
+/* ==========================================================================
+   AuraGlow — Auth & Skin Quiz Module Styles (Dinu's Module)
+   Scoped specifically to prevent interfering with main layout containers.
+   ========================================================================== */
+
+/* Auth container for centered login/register/quiz flows */
+.auth-container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+  position: relative;
+  z-index: 1;
+  min-height: calc(100vh - var(--nav-height) - 120px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-container-wide {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+  position: relative;
+  z-index: 1;
+  min-height: calc(100vh - var(--nav-height) - 120px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.page-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-extrabold);
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: var(--space-2);
+  text-align: center;
+  animation: titleShimmer 4s ease-in-out infinite alternate;
+}
+
+.page-subtitle {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-8);
+  text-align: center;
+}
+
+.auth-card {
+  background: var(--color-bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(232, 180, 160, 0.15);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 60px rgba(232, 180, 160, 0.06);
+}
+
+.form-footer-text {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-6);
+}
+.form-footer-text a {
+  color: var(--color-accent-rose);
+  text-decoration: none;
+  font-weight: var(--font-semibold);
+  transition: color var(--transition-fast);
+}
+.form-footer-text a:hover {
+  color: var(--color-accent-peach);
+  text-decoration: underline;
+}
+
+.alert-banner {
+  background: rgba(232, 122, 122, 0.12);
+  border: 1px solid rgba(232, 122, 122, 0.3);
+  color: var(--color-error);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-5);
+  box-shadow: 0 0 12px rgba(232, 122, 122, 0.1);
+}
+.alert-banner.success {
+  background: rgba(126, 200, 160, 0.12);
+  border-color: rgba(126, 200, 160, 0.3);
+  color: var(--color-success);
+  box-shadow: 0 0 12px rgba(126, 200, 160, 0.1);
+}
+
+/* Skin quiz option chips & progress */
+.quiz-progress {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
+}
+.quiz-progress-dot {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-border);
+  transition: all var(--transition-base);
+}
+.quiz-progress-dot.active {
+  background: var(--gradient-brand);
+  box-shadow: 0 0 8px rgba(232, 180, 160, 0.4), 0 0 20px rgba(232, 180, 160, 0.2);
+}
+
+.option-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-8);
+}
+.option-chip {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  text-align: center;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  backdrop-filter: blur(8px);
+  transition: all var(--transition-fast), box-shadow var(--transition-base);
+}
+.option-chip:hover {
+  border-color: rgba(232, 180, 160, 0.4);
+  box-shadow: 0 0 12px rgba(232, 180, 160, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+}
+.option-chip.selected {
+  background: rgba(232, 180, 160, 0.12);
+  border-color: var(--color-accent-rose);
+  color: var(--color-accent-rose);
+  box-shadow: 0 0 16px rgba(232, 180, 160, 0.25), 0 0 40px rgba(232, 180, 160, 0.1), inset 0 0 12px rgba(232, 180, 160, 0.06);
+}
+
+.quiz-nav {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
+  border-radius: var(--radius-sm);
+}
+.profile-row:last-child {
+  border-bottom: none;
+}
+.profile-row:hover {
+  background: rgba(232, 180, 160, 0.04);
+}
+.profile-label {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+.profile-value {
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+}
+
+.badge-cf {
+  background: rgba(184, 169, 217, 0.12);
+  border-color: rgba(184, 169, 217, 0.3);
+  color: var(--color-accent-lavender);
+  box-shadow: 0 0 10px rgba(184, 169, 217, 0.2), 0 0 20px rgba(184, 169, 217, 0.08);
+}
+
+@keyframes titleShimmer {
+  0%   { filter: brightness(1) drop-shadow(0 0 0px transparent); }
+  100% { filter: brightness(1.15) drop-shadow(0 0 8px rgba(232, 180, 160, 0.3)); }
+}
