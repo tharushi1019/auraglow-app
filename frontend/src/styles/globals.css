@@ -321,6 +321,38 @@ input:disabled, textarea:disabled, select:disabled {
   color: var(--color-error);
 }
 
+/* Order / general status badges */
+.badge-warning {
+  background: rgba(240, 200, 122, 0.12);
+  border-color: rgba(240, 200, 122, 0.3);
+  color: var(--color-warning);
+}
+
+.badge-info {
+  background: rgba(184, 169, 217, 0.12);
+  border-color: rgba(184, 169, 217, 0.3);
+  color: var(--color-accent-lavender);
+}
+
+.badge-success {
+  background: rgba(126, 200, 160, 0.12);
+  border-color: rgba(126, 200, 160, 0.3);
+  color: var(--color-success);
+}
+
+.badge-error {
+  background: rgba(232, 122, 122, 0.12);
+  border-color: rgba(232, 122, 122, 0.3);
+  color: var(--color-error);
+}
+
+.badge-pending {
+  background: rgba(212, 175, 130, 0.12);
+  border-color: rgba(212, 175, 130, 0.3);
+  color: var(--color-accent-peach);
+}
+
+
 /* ==========================================================================
    LOADING SKELETON ANIMATION
    ========================================================================== */

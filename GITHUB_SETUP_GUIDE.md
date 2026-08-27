@@ -40,45 +40,45 @@ git push -u origin main
 
 ---
 
-## ✅ STEP 4: Create the `develop` Integration Branch
+## ✅ STEP 4: Push the `develop` Integration Branch
 
 ```powershell
-git checkout -b develop
+git checkout develop
 git push -u origin develop
 ```
 
 ---
 
-## ✅ STEP 5: Create All Feature Branches
+## ✅ STEP 5: Push All Feature Branches
 
 ```powershell
 # Module 1 — Dinu
-git checkout -b feature/auth-profile
+git checkout feature/auth-profile
 git push -u origin feature/auth-profile
 git checkout develop
 
 # Module 2 — Keshara
-git checkout -b feature/product-catalog
+git checkout feature/product-catalog
 git push -u origin feature/product-catalog
 git checkout develop
 
 # Module 3 — Achani
-git checkout -b feature/cart-wishlist
+git checkout feature/cart-wishlist
 git push -u origin feature/cart-wishlist
 git checkout develop
 
 # Module 4 — Maduni
-git checkout -b feature/review-recommendation
+git checkout feature/review-recommendation
 git push -u origin feature/review-recommendation
 git checkout develop
 
 # Module 5 — Kaveesha
-git checkout -b feature/checkout-stripe
+git checkout feature/checkout-stripe
 git push -u origin feature/checkout-stripe
 git checkout develop
 
 # Module 6 — Tharushi (Admin — your own branch)
-git checkout -b feature/admin-dashboard
+git checkout feature/admin-dashboard
 git push -u origin feature/admin-dashboard
 git checkout develop
 ```
