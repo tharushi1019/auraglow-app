@@ -147,7 +147,7 @@ export default function Home() {
       <Navbar />
 
       {/* ── 2. HERO ────────────────────────────────────────────────────────── */}
-      <section style={{
+      <section className="hero-grid" style={{
         marginTop: 'var(--nav-height)',
         minHeight: 'calc(100vh - var(--nav-height))',
         display: 'grid',
@@ -156,7 +156,6 @@ export default function Home() {
         gap: 0,
         overflow: 'hidden',
         background: 'var(--gradient-hero)',
-
       }}>
         {/* Left copy */}
         <div className="slide-in-left" style={{ padding: 'var(--space-16) var(--space-12)', background: 'var(--gradient-hero)' }}>
@@ -237,7 +236,7 @@ export default function Home() {
           <p className="section-heading__subtitle">Curated formulas for every aspect of your beauty routine</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-4)' }}>
+        <div className="home-cat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-4)' }}>
           {categories.map((cat) => (
             <Link key={cat.name} to={`/products?category=${cat.name.toLowerCase()}`} className="category-card" style={{ textDecoration: 'none', borderRadius: 'var(--radius-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '3/4', display: 'block', border: `1px solid ${cat.border}` }}>
               <img src={cat.img} alt={cat.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }} />
@@ -261,7 +260,7 @@ export default function Home() {
           </div>
           <Link to="/products" className="btn btn-ghost btn-sm btn-pill">View All Products →</Link>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-6)' }}>
+        <div className="home-prod-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-6)' }}>
           {featured.map(p => <ProductCard key={p.id} p={p} />)}
         </div>
       </section>
@@ -295,7 +294,7 @@ export default function Home() {
           <h2 className="section-heading__title">Powered by Nature's Best</h2>
           <p className="section-heading__subtitle">Every ingredient is carefully chosen for efficacy, safety, and sustainability.</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-6)' }}>
+        <div className="home-ingredients-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-6)' }}>
           {ingredients.map(ing => (
             <div key={ing.name} className="card" style={{ textAlign: 'center', cursor: 'default' }}>
               <div style={{ fontSize: '40px', marginBottom: 'var(--space-4)' }}>{ing.icon}</div>
@@ -308,7 +307,7 @@ export default function Home() {
 
       {/* ── 8. BEFORE / AFTER PROMISE ─────────────────────────────────────── */}
       <section style={{ background: 'var(--color-bg-secondary)', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', padding: 'var(--space-16) var(--space-10)' }}>
-        <div className="container" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-16)', alignItems: 'center' }}>
+        <div className="container home-feature-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-16)', alignItems: 'center' }}>
           <div>
             <p className="section-heading__eyebrow" style={{ textAlign: 'left', marginBottom: 'var(--space-3)' }}>Why AuraGlow</p>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-3xl)', fontWeight: '700', marginBottom: 'var(--space-6)', lineHeight: 1.2 }}>
@@ -346,7 +345,7 @@ export default function Home() {
           <h2 className="section-heading__title">Real Results, Real Reviews</h2>
           <p className="section-heading__subtitle">From thousands of happy customers who found their glow with AuraGlow.</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-6)' }}>
+        <div className="home-reviews-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-6)' }}>
           {reviews.map((r, i) => (
             <div key={i} className="card">
               <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
@@ -386,7 +385,7 @@ export default function Home() {
 
       {/* ── 11. FOOTER ─────────────────────────────────────────────────────── */}
       <footer style={{ marginTop: 'var(--space-16)', borderTop: '1px solid var(--color-border)', padding: 'var(--space-12) var(--space-10) var(--space-6)', background: 'var(--color-bg-secondary)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 'var(--space-10)', marginBottom: 'var(--space-10)' }}>
+        <div className="home-footer-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 'var(--space-10)', marginBottom: 'var(--space-10)' }}>
           <div>
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: '800', background: 'var(--gradient-text)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 'var(--space-4)' }}>AuraGlow</div>
             <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', lineHeight: 1.7, maxWidth: '280px' }}>
@@ -394,18 +393,49 @@ export default function Home() {
             </p>
           </div>
           {[
-            { title: 'Shop', links: ['Skincare', 'Makeup', 'Fragrance', 'Tools', 'Best Sellers'] },
-            { title: 'Learn', links: ['Skin Quiz', 'Ingredients', 'Blog', 'Routines'] },
-            { title: 'Support', links: ['My Orders', 'Returns', 'FAQ', 'Contact Us'] },
+            {
+              title: 'Shop',
+              links: [
+                { label: 'Skincare', path: '/products?category=skincare' },
+                { label: 'Clean Makeup', path: '/products?category=makeup' },
+                { label: 'Fragrance', path: '/products?category=fragrance' },
+                { label: 'Beauty Tools', path: '/products?category=tools' },
+                { label: 'All Products', path: '/products' },
+              ],
+            },
+            {
+              title: 'Personalization',
+              links: [
+                { label: '✨ Take Skin Quiz', path: '/skin-quiz' },
+                { label: 'AI Routine Advisor', path: '/recommendations' },
+                { label: 'My Skin Profile', path: '/profile' },
+                { label: 'Shopping Bag', path: '/cart' },
+              ],
+            },
+            {
+              title: 'Customer Support',
+              links: [
+                { label: 'Contact Us', path: '/support' },
+                { label: 'Frequently Asked Questions', path: '/support' },
+                { label: 'Shipping & Delivery', path: '/support' },
+                { label: 'Track My Order', path: '/orders' },
+              ],
+            },
           ].map(col => (
             <div key={col.title}>
               <h4 style={{ fontSize: 'var(--text-xs)', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)' }}>{col.title}</h4>
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                 {col.links.map(link => (
-                  <li key={link}><Link to="/products" style={{ color: 'var(--color-text-muted)', textDecoration: 'none', fontSize: 'var(--text-sm)', transition: 'color 150ms ease' }}
-                    onMouseEnter={e => e.target.style.color = 'var(--color-accent-rose)'}
-                    onMouseLeave={e => e.target.style.color = 'var(--color-text-muted)'}
-                  >{link}</Link></li>
+                  <li key={link.label}>
+                    <Link
+                      to={link.path}
+                      style={{ color: 'var(--color-text-muted)', textDecoration: 'none', fontSize: 'var(--text-sm)', transition: 'color 150ms ease' }}
+                      onMouseEnter={e => e.target.style.color = 'var(--color-accent-rose)'}
+                      onMouseLeave={e => e.target.style.color = 'var(--color-text-muted)'}
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
                 ))}
               </ul>
             </div>

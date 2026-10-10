@@ -7,7 +7,7 @@
 
 import { products } from '@/data/mockData';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 const routinePresets = {
   Dry: {
@@ -77,45 +77,97 @@ const routinePresets = {
 };
 
 /**
- * Get tailored routine based on skin profile
+/**
+ * Get tailored routine based on skin profile — calls backend AI Service (Google Gemini / Clinical Diagnostic)
  */
-export async function getRoutineBySkinProfile(skinType = 'Combination', concern = 'Dullness') {
+export async function getRoutineBySkinProfile(skinType = 'Combination', concern = 'Dullness', fullProfile = null) {
   try {
-    const res = await fetch(`${API_BASE}/recommendations/skin-profile?skinType=${skinType}&concern=${encodeURIComponent(concern)}`);
-    if (!res.ok) throw new Error('Recommendation API failed');
-    const data = await res.json();
-    if (data && data.success && data.routine) {
-      return enrichRoutineWithProducts(data.routine);
+    const payload = {
+      skinType: fullProfile?.skin_type || fullProfile?.skinType || skinType,
+      concerns: fullProfile?.concerns || (concern ? [concern] : ['Dullness & Uneven Tone']),
+      allergens: fullProfile?.allergens || [],
+      skinTone: fullProfile?.skin_tone || fullProfile?.skinTone || 'Medium',
+      undertone: fullProfile?.undertone || 'Warm',
+    };
+
+    const res = await fetch(`${API_BASE}/ai/routine`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && data.routine) {
+        return {
+          ...enrichRoutineWithProducts(data.routine),
+          isRealAI: data.isRealAI,
+          model: data.model,
+          notice: data.notice,
+        };
+      }
     }
-    throw new Error('Fallback needed');
-  } catch {
-    const matched = routinePresets[skinType] || routinePresets.Combination;
-    return enrichRoutineWithProducts(matched);
+  } catch (err) {
+    console.warn('⚠️ [recommendationService] AI backend request note, using fallback preset:', err.message);
   }
+
+  // Fallback to local preset if network is down
+  const matched = routinePresets[skinType] || routinePresets.Combination;
+  return {
+    ...enrichRoutineWithProducts(matched),
+    isRealAI: false,
+    model: 'AuraGlow Clinical Presets',
+  };
 }
 
 /**
- * Calculate compatibility match score between a product and a user skin profile
+ * Calculate dynamic compatibility match score between a product and a user skin profile
  */
-export function calculateSkinMatchScore(product, userSkinType = 'Dry') {
+export function calculateSkinMatchScore(product, userSkinType = 'Combination', userProfile = null) {
   if (!product) return 92;
-  const matchFactors = {
-    'prod-001': { Dry: 98, Combination: 96, Normal: 95, Sensitive: 91, Oily: 94 },
-    'prod-002': { Dry: 90, Combination: 95, Normal: 96, Sensitive: 92, Oily: 95 },
-    'prod-003': { Dry: 99, Sensitive: 98, Combination: 94, Normal: 96, Oily: 84 },
-    'prod-004': { Dry: 92, Combination: 94, Normal: 95, Sensitive: 93, Oily: 93 },
-    'prod-005': { Oily: 99, Combination: 97, Sensitive: 95, Dry: 91, Normal: 96 },
-    'prod-006': { Dry: 95, Combination: 95, Normal: 95, Sensitive: 92, Oily: 95 },
-    'prod-007': { Dry: 97, Combination: 97, Normal: 97, Sensitive: 97, Oily: 97 },
-    'prod-008': { Dry: 97, Sensitive: 98, Oily: 96, Combination: 98, Normal: 98 },
-  };
 
-  const productScores = matchFactors[product.id];
-  if (productScores && productScores[userSkinType]) {
-    return productScores[userSkinType];
+  let baseScore = 75;
+
+  // 1. Skin type match evaluation
+  const targetType = (userSkinType || 'Combination').toLowerCase();
+  const compatibleTypes = (product.skinTypes || product.skin_types_compatible || []).map(t => t.toLowerCase());
+
+  if (compatibleTypes.includes('all skin types') || compatibleTypes.includes('all skin tones') || compatibleTypes.length === 0) {
+    baseScore += 18;
+  } else if (compatibleTypes.some(t => t.includes(targetType))) {
+    baseScore += 20;
+  } else {
+    baseScore += 5;
   }
-  return 95;
+
+  // 2. Clean beauty / Botanical bonus
+  if (product.isVegan || product.is_vegan) baseScore += 2;
+  if (product.isCrueltyFree || product.is_cruelty_free) baseScore += 2;
+
+  // 3. User concerns match (if userProfile concerns available)
+  if (userProfile && userProfile.concerns && Array.isArray(userProfile.concerns)) {
+    const productConcerns = (product.concerns_addressed || product.tags || []).map(c => c.toLowerCase());
+    const matchedConcerns = userProfile.concerns.filter(c => 
+      productConcerns.some(pc => pc.includes(c.toLowerCase()))
+    );
+    baseScore += Math.min(matchedConcerns.length * 3, 9);
+  }
+
+  // 4. Allergen penalty check
+  if (userProfile && userProfile.allergens && Array.isArray(userProfile.allergens)) {
+    const productIngredients = (product.ingredients || []).map(i => i.toLowerCase());
+    const hasAllergen = userProfile.allergens.some(a => 
+      a !== 'None' && productIngredients.some(ing => ing.includes(a.toLowerCase()))
+    );
+    if (hasAllergen) {
+      baseScore -= 25;
+    }
+  }
+
+  // Cap between 60% and 99%
+  return Math.max(60, Math.min(99, Math.round(baseScore)));
 }
+
 
 /**
  * Helper to link actual product objects to routine step items
@@ -131,9 +183,13 @@ function enrichRoutineWithProducts(routine) {
     });
   };
 
+  const rawAm = routine.amRoutine || routine.am || [];
+  const rawPm = routine.pmRoutine || routine.pm || [];
+
   return {
     ...routine,
-    am: enrichSteps(routine.am),
-    pm: enrichSteps(routine.pm),
+    description: routine.description || routine.clinicalRationale || '',
+    am: enrichSteps(rawAm),
+    pm: enrichSteps(rawPm),
   };
 }

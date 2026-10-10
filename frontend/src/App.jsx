@@ -56,19 +56,19 @@ function ScrollToTop() {
 
 function App() {
   return (
-    <CurrencyProvider>
+    <BrowserRouter>
       <CartProvider>
-        <BrowserRouter>
-          <ScrollToTop />
-          <Routes>
+        <ScrollToTop />
+        <Routes>
             {/* ── Home (manages its own nav + layout internally) ── */}
             <Route path="/" element={<Home />} />
 
             {/* ── Module 1: Auth & Profile Pages (Dinu) ── */}
             <Route path="/login"     element={<WithLayout><Login /></WithLayout>} />
             <Route path="/register"  element={<WithLayout><Register /></WithLayout>} />
-            <Route path="/profile"   element={<WithLayout><Profile /></WithLayout>} />
-            <Route path="/skin-quiz" element={<WithLayout><SkinQuiz /></WithLayout>} />
+            <Route path="/profile"   element={<ProtectedRoute><WithLayout><Profile /></WithLayout></ProtectedRoute>} />
+            <Route path="/skin-quiz" element={<ProtectedRoute><WithLayout><SkinQuiz /></WithLayout></ProtectedRoute>} />
+            <Route path="/quiz"      element={<ProtectedRoute><WithLayout><SkinQuiz /></WithLayout></ProtectedRoute>} />
 
             {/* ── Module 2: Product Routes (Keshara) ── */}
             <Route path="/products"     element={<CatalogPage />} />
@@ -76,20 +76,21 @@ function App() {
 
             {/* ── Module 3: Cart & Wishlist (Achani) ── */}
             <Route path="/cart"     element={<CartPage />} />
-            <Route path="/wishlist" element={<WishlistPage />} />
+            <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
 
             {/* ── Module 4: Recommendations & AI Advisor (Maduni) ── */}
             <Route path="/recommendations" element={<RecommendationsPage />} />
             <Route path="/advisor"         element={<RecommendationsPage />} />
 
             {/* ── Module 5: Checkout & Orders (Kaveesha) ── */}
-            <Route path="/checkout"       element={<CheckoutPage />} />
+            <Route path="/checkout"       element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+            <Route path="/orders"         element={<OrderTrackingPage />} />
             <Route path="/orders/confirm" element={<OrderConfirmationPage />} />
             <Route path="/orders/:id"     element={<OrderTrackingPage />} />
             <Route path="/support"        element={<SupportPage />} />
 
             {/* ── Module 6: Admin Routes (Tharushi) ── */}
-            <Route path="/admin" element={<AdminLayout />}>
+            <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
               <Route index           element={<AdminDashboard />} />
               <Route path="products" element={<AdminProducts />} />
               <Route path="orders"   element={<AdminOrders />} />
@@ -98,9 +99,8 @@ function App() {
             {/* ── Fallback 404 ── */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </CartProvider>
-    </CurrencyProvider>
+        </CartProvider>
+      </BrowserRouter>
   )
 }
 

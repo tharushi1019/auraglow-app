@@ -14,6 +14,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ── Health Check ──────────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({
+    message: 'AuraGlow API is running 🌸',
+    version: '1.0.0',
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -28,33 +37,56 @@ app.get('/health', (req, res) => {
 // Module 1 — Dinu (Auth & Profile)
 const authRoutes = require('./routes/auth.routes');
 app.use('/api/v1/auth', authRoutes);
+app.use('/auth', authRoutes);
 
 // Module 2 — Keshara (Product Catalog)
 const productRoutes = require('./routes/product.routes');
 app.use('/api/v1/products', productRoutes);
+app.use('/products', productRoutes);
 
 // Module 3 — Achani (Cart & Wishlist)
 const cartRoutes = require('./routes/cart.routes');
 const wishlistRoutes = require('./routes/wishlist.routes');
 app.use('/api/v1/cart', cartRoutes);
+app.use('/cart', cartRoutes);
 app.use('/api/v1/wishlist', wishlistRoutes);
+app.use('/wishlist', wishlistRoutes);
 
 // Module 4 — Maduni (Reviews & Recommendations)
 const reviewRoutes = require('./routes/review.routes');
 app.use('/api/v1/reviews', reviewRoutes);
+app.use('/reviews', reviewRoutes);
 app.use('/api/v1/recommendations', reviewRoutes);
+app.use('/recommendations', reviewRoutes);
 
 // Module 5 — Kaveesha (Checkout & Orders)
 const checkoutRoutes = require('./routes/checkout.routes');
 app.use('/api/v1/checkout', checkoutRoutes);
+app.use('/checkout', checkoutRoutes);
 app.use('/api/v1/orders', (req, res, next) => {
+  req.url = '/orders' + req.url;
+  checkoutRoutes(req, res, next);
+});
+app.use('/orders', (req, res, next) => {
   req.url = '/orders' + req.url;
   checkoutRoutes(req, res, next);
 });
 
 // Module 6 — Tharushi (Admin Dashboard)
-// const adminRoutes = require('./routes/admin.routes');
-// app.use('/api/v1/admin', adminRoutes);
+const adminRoutes = require('./routes/admin.routes');
+app.use('/api/v1/admin', adminRoutes);
+app.use('/admin', adminRoutes);
+
+// Customer Support
+const supportRoutes = require('./routes/support.routes');
+app.use('/api/v1/support', supportRoutes);
+app.use('/support', supportRoutes);
+
+// AI Skincare Intelligence & Advisor (Google Gemini)
+const aiRoutes = require('./routes/ai.routes');
+app.use('/api/v1/ai', aiRoutes);
+app.use('/ai', aiRoutes);
+
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use('*', (req, res) => {

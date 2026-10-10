@@ -12,13 +12,29 @@ export default function PersonalizedRoutineWidget({
   const [concern, setConcern] = useState(initialConcern);
   const [timeOfDay, setTimeOfDay] = useState('am'); // 'am' | 'pm'
   const [routineData, setRoutineData] = useState(null);
+  const [routineLoading, setRoutineLoading] = useState(false);
   const [bundleAdded, setBundleAdded] = useState(false);
   const { formatPrice } = useCurrency();
 
   useEffect(() => {
+    if (initialSkinType) setSkinType(initialSkinType);
+  }, [initialSkinType]);
+
+  useEffect(() => {
+    if (initialConcern) setConcern(initialConcern);
+  }, [initialConcern]);
+
+  useEffect(() => {
     async function loadRoutine() {
-      const data = await getRoutineBySkinProfile(skinType, concern);
-      setRoutineData(data);
+      setRoutineLoading(true);
+      try {
+        const data = await getRoutineBySkinProfile(skinType, concern);
+        setRoutineData(data);
+      } catch (e) {
+        console.error('Failed to load routine', e);
+      } finally {
+        setRoutineLoading(false);
+      }
     }
     loadRoutine();
   }, [skinType, concern]);
@@ -54,11 +70,19 @@ export default function PersonalizedRoutineWidget({
       {/* Header: Title & Skin Profile Selector */}
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-4)' }}>
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(232, 114, 150, 0.15)', border: '1px solid var(--color-accent-rose)', borderRadius: 'var(--radius-full)', padding: '3px 10px', fontSize: '11px', fontWeight: '700', color: 'var(--color-accent-rose)', textTransform: 'uppercase', marginBottom: 'var(--space-2)' }}>
-            ✨ AI Beauty Advisor
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-2)' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(232, 114, 150, 0.15)', border: '1px solid var(--color-accent-rose)', borderRadius: 'var(--radius-full)', padding: '3px 10px', fontSize: '11px', fontWeight: '700', color: 'var(--color-accent-rose)', textTransform: 'uppercase' }}>
+              ✨ AI Beauty Advisor
+            </div>
+            {routineData?.model && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(126, 200, 160, 0.15)', border: '1px solid rgba(126, 200, 160, 0.3)', borderRadius: 'var(--radius-full)', padding: '2px 8px', fontSize: '10px', fontWeight: '600', color: 'var(--color-accent-sage)' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-accent-sage)', display: 'inline-block' }} />
+                {routineData.model}
+              </div>
+            )}
           </div>
           <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: '800', color: 'var(--color-text-primary)', margin: '0 0 var(--space-1) 0' }}>
-            {routineData?.title || 'Personalized Clean Routine'}
+            {routineLoading ? 'Analyzing skin profile with AI...' : (routineData?.title || 'Personalized Clean Routine')}
           </h3>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', margin: 0, maxWidth: '640px', lineHeight: 1.5 }}>
             {routineData?.description}

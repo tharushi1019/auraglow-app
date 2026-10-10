@@ -44,6 +44,8 @@ function Confetti() {
   );
 }
 
+import { sendOrderInvoiceEmail } from '@/services/emailjsService';
+
 export default function OrderConfirmationPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -59,9 +61,11 @@ export default function OrderConfirmationPage() {
   };
 
   useEffect(() => {
-    // Entrance animation
     setTimeout(() => setShow(true), 100);
+    // Dispatch EmailJS Invoice Receipt
+    sendOrderInvoiceEmail(order).catch(err => console.warn('EmailJS Invoice dispatch:', err));
   }, []);
+
 
   const deliveryDate = new Date(order.estimatedDelivery).toLocaleDateString('en-US', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',

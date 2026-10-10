@@ -6,6 +6,7 @@ import ProductImageGallery from '@/components/catalog/ProductImageGallery';
 import ReviewsSection from '@/components/reviews/ReviewsSection';
 import SkinMatchBadge from '@/components/reviews/SkinMatchBadge';
 import PersonalizedRoutineWidget from '@/components/reviews/PersonalizedRoutineWidget';
+import ShadeSelectionAssistant from '@/components/catalog/ShadeSelectionAssistant';
 import ProductCard from '@/components/catalog/ProductCard';
 import { useCurrency } from '@/context/CurrencyContext';
 import { useCart } from '@/context/CartContext';
@@ -14,13 +15,13 @@ import { getProductById, getRelatedProducts } from '@/services/productService';
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart, toggleWishlist, isInWishlist } = useCart();
+  const { addToCart, toggleWishlist, isInWishlist, requireAuth } = useCart();
   const { formatPrice } = useCurrency();
-
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [selectedShade, setSelectedShade] = useState(null);
   const [activeTab, setActiveTab] = useState('description');
   const [toastMessage, setToastMessage] = useState(null);
   const [added, setAdded] = useState(false);
@@ -49,20 +50,25 @@ export default function ProductDetailPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product || product.stock === 0) return;
-    setAdded(true);
-    addToCart(product, quantity);
-    showToast(`🌸 Added ${quantity} × "${product.name}" to your shopping bag!`);
-    setTimeout(() => setAdded(false), 2000);
+    const addedSuccess = await addToCart(product, quantity);
+    if (addedSuccess) {
+      setAdded(true);
+      showToast(`🌸 Added ${quantity} × "${product.name}" to your shopping bag!`);
+      setTimeout(() => setAdded(false), 2000);
+    }
   };
 
-  const handleBuyNow = () => {
+
+  const handleBuyNow = async () => {
     if (!product || product.stock === 0) return;
-    addToCart(product, quantity);
+    if (requireAuth('checkout immediately')) return;
+    await addToCart(product, quantity);
     showToast(`🛍️ Proceeding to checkout with "${product.name}"...`);
     setTimeout(() => navigate('/checkout'), 800);
   };
+
 
   if (loading) {
     return (
@@ -265,10 +271,20 @@ export default function ProductDetailPage() {
             {/* AI Skin Compatibility Match Badge */}
             <SkinMatchBadge product={product} initialSkinType={product.skinTypes ? product.skinTypes[0] : 'Dry'} />
 
+            {/* Shade Selection Assistant for Makeup / Cosmetics */}
+            {(product.category === 'makeup' || (product.shades && product.shades.length > 0)) && (
+              <ShadeSelectionAssistant
+                product={product}
+                selectedShade={selectedShade}
+                onSelectShade={(shadeName) => setSelectedShade(shadeName)}
+              />
+            )}
+
             {/* Short Excerpt */}
             <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-base)', lineHeight: 1.6, margin: 0 }}>
               {product.description}
             </p>
+
 
             {/* Actions: Quantity + Add to Bag + Buy Now + Wishlist */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>

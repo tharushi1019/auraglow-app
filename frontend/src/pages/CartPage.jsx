@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
 import { useCart } from '@/context/CartContext';
 import { useCurrency } from '@/context/CurrencyContext';
 
 export default function CartPage() {
-  const { cart, removeFromCart, updateQuantity, clearCart } = useCart();
+  const navigate = useNavigate();
+  const { cart, removeFromCart, updateQuantity, clearCart, requireAuth } = useCart();
   const { formatPrice } = useCurrency();
   const [promoCode, setPromoCode] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -81,7 +82,7 @@ export default function CartPage() {
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-8)', alignItems: 'start' }}>
+          <div className="cart-layout-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-8)', alignItems: 'start' }}>
             
             {/* Left: Cart Items List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -257,13 +258,17 @@ export default function CartPage() {
                   <span style={{ color: 'var(--color-accent-rose)' }}>{formatPrice(total)}</span>
                 </div>
 
-                <Link
-                  to="/checkout"
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (requireAuth('proceed to checkout and place your order')) return;
+                    navigate('/checkout');
+                  }}
                   className="btn btn-primary btn-pill"
-                  style={{ textDecoration: 'none', textAlign: 'center', display: 'block', padding: '12px 24px', fontWeight: '700', fontSize: 'var(--text-sm)', marginTop: 'var(--space-2)' }}
+                  style={{ width: '100%', textAlign: 'center', display: 'block', padding: '12px 24px', fontWeight: '700', fontSize: 'var(--text-sm)', marginTop: 'var(--space-2)', cursor: 'pointer', border: 'none' }}
                 >
                   Proceed to Checkout 🔒
-                </Link>
+                </button>
 
                 {shipping > 0 && (
                   <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', textAlign: 'center', margin: 0 }}>

@@ -5,6 +5,8 @@
  * =============================================================================
  */
 
+const supabase = require('../config/supabaseClient');
+
 // Fallback seed / mock data in case Supabase client is not configured
 const initialProducts = [
   {
@@ -219,7 +221,49 @@ const categoriesData = [
  */
 exports.getProducts = async (req, res, next) => {
   try {
-    let result = [...initialProducts];
+    // ── Try to fetch live products from Supabase first ──────────────────────
+    let result = [];
+    if (supabase) {
+      try {
+        const { data: dbProducts, error: dbErr } = await supabase
+          .from('products')
+          .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description, tags')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
+
+        if (!dbErr && dbProducts && dbProducts.length > 0) {
+          result = dbProducts.map(p => ({
+            id: p.id,
+            name: p.name || '',
+            brand: p.brand || 'AuraGlow',
+            category: (p.category || 'skincare').toLowerCase(),
+            price: parseFloat(p.price) || 0,
+            oldPrice: null,
+            stock: p.stock_quantity ?? 0,
+            rating: 4.7,
+            reviewCount: 100,
+            isVegan: p.is_vegan ?? false,
+            isCrueltyFree: p.is_cruelty_free ?? true,
+            tags: Array.isArray(p.tags) ? p.tags : [p.category || 'skincare'],
+            badge: p.is_vegan ? '🌱 Vegan' : '🐰 Cruelty-Free',
+            badgeClass: p.is_vegan ? 'badge-vegan' : 'badge-cruelty-free',
+            description: p.description || '',
+            ingredients: [],
+            image: (Array.isArray(p.images) && p.images.length > 0)
+              ? p.images[0]
+              : 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=500&q=80',
+            imageGallery: Array.isArray(p.images) ? p.images : [],
+          }));
+        }
+      } catch (dbFetchErr) {
+        console.warn('⚠️ [Products] Supabase fetch note, using mock data:', dbFetchErr.message);
+      }
+    }
+
+    // Fallback to static mock products if Supabase returned nothing
+    if (result.length === 0) {
+      result = [...initialProducts];
+    }
     const {
       search,
       category,
@@ -315,18 +359,54 @@ exports.getProducts = async (req, res, next) => {
 exports.getProductById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const product = initialProducts.find(p => p.id === id || p.id.toLowerCase() === id.toLowerCase());
 
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: `Product with ID '${id}' not found`,
-      });
+    // Check mock data first (handles 'prod-001' style IDs)
+    const mockProduct = initialProducts.find(p => p.id === id || p.id.toLowerCase() === id.toLowerCase());
+    if (mockProduct) {
+      return res.json({ success: true, product: mockProduct });
     }
 
-    res.json({
-      success: true,
-      product,
+    // If not found in mock, try Supabase (handles UUID-based lookups)
+    if (supabase) {
+      try {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        if (isUuid) {
+          const { data: dbProduct } = await supabase
+            .from('products')
+            .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description, tags')
+            .eq('id', id)
+            .maybeSingle();
+          if (dbProduct) {
+            return res.json({
+              success: true,
+              product: {
+                id: dbProduct.id,
+                name: dbProduct.name || '',
+                brand: dbProduct.brand || 'AuraGlow',
+                category: (dbProduct.category || 'skincare').toLowerCase(),
+                price: parseFloat(dbProduct.price) || 0,
+                stock: dbProduct.stock_quantity ?? 0,
+                isVegan: dbProduct.is_vegan ?? false,
+                isCrueltyFree: dbProduct.is_cruelty_free ?? true,
+                tags: Array.isArray(dbProduct.tags) ? dbProduct.tags : [dbProduct.category],
+                description: dbProduct.description || '',
+                ingredients: [],
+                image: (Array.isArray(dbProduct.images) && dbProduct.images.length > 0)
+                  ? dbProduct.images[0]
+                  : 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=500&q=80',
+                imageGallery: Array.isArray(dbProduct.images) ? dbProduct.images : [],
+              },
+            });
+          }
+        }
+      } catch (dbErr) {
+        console.warn('⚠️ [ProductById] Supabase lookup note:', dbErr.message);
+      }
+    }
+
+    return res.status(404).json({
+      success: false,
+      message: `Product with ID '${id}' not found`,
     });
   } catch (error) {
     next(error);
@@ -394,3 +474,5 @@ exports.getRelatedProducts = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.initialProducts = initialProducts;

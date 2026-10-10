@@ -1,14 +1,9 @@
-/**
- * =============================================================================
- *  AuraGlow — Cart Context Provider (frontend/src/context/CartContext.jsx)
- *  Module 3: Shopping Cart & Wishlist (Achani)
- * =============================================================================
- */
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { fetchCart, syncCart } from '@/services/cartService';
 import { fetchWishlist, toggleWishlistBackend } from '@/services/wishlistService';
 import { products as mockProducts } from '@/data/mockData';
+import { useAuth } from '@/context/AuthContext';
+import AuthRequiredModal from '@/components/common/AuthRequiredModal';
 
 const CartContext = createContext();
 
@@ -17,20 +12,32 @@ export function useCart() {
 }
 
 export function CartProvider({ children }) {
+  const { user } = useAuth();
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authActionName, setAuthActionName] = useState('add items to your shopping bag');
 
-  // Initial Load
+  // Load data when user logs in, reset when logged out
   useEffect(() => {
+    if (!user) {
+      setCart([]);
+      setWishlist([]);
+      localStorage.removeItem('auraglow_cart');
+      localStorage.removeItem('auraglow_wishlist');
+      setLoading(false);
+      return;
+    }
+
     async function loadData() {
+      setLoading(true);
       const [rawCart, rawWishlist] = await Promise.all([
         fetchCart(),
         fetchWishlist(),
       ]);
 
-      // Enrich raw cart items with full product objects from mockData/API
-      const enrichedCart = rawCart.map(item => {
+      const enrichedCart = (rawCart || []).map(item => {
         const prod = mockProducts.find(p => p.id === (item.productId || item.id));
         return {
           ...item,
@@ -39,8 +46,7 @@ export function CartProvider({ children }) {
         };
       });
 
-      // Enrich wishlist product IDs with full objects
-      const enrichedWishlist = rawWishlist.map(id => {
+      const enrichedWishlist = (rawWishlist || []).map(id => {
         return mockProducts.find(p => p.id === id);
       }).filter(Boolean);
 
@@ -49,7 +55,7 @@ export function CartProvider({ children }) {
       setLoading(false);
     }
     loadData();
-  }, []);
+  }, [user]);
 
   // Sync Cart to local/remote when modified
   const updateCartState = async (newCart) => {
@@ -64,6 +70,12 @@ export function CartProvider({ children }) {
   };
 
   const addToCart = async (product, qty = 1) => {
+    if (!user) {
+      setAuthActionName('add products to your shopping bag');
+      setAuthModalOpen(true);
+      return false;
+    }
+
     const quantity = Number(qty);
     const existingIndex = cart.findIndex(item => item.id === product.id);
     let newCart = [...cart];
@@ -79,6 +91,7 @@ export function CartProvider({ children }) {
       });
     }
     await updateCartState(newCart);
+    return true;
   };
 
   const removeFromCart = async (productId) => {
@@ -102,6 +115,12 @@ export function CartProvider({ children }) {
   };
 
   const toggleWishlist = async (product) => {
+    if (!user) {
+      setAuthActionName('save products to your wishlist');
+      setAuthModalOpen(true);
+      return false;
+    }
+
     const isMatched = wishlist.some(p => p.id === product.id);
     let newWishlist = [];
 
@@ -112,9 +131,9 @@ export function CartProvider({ children }) {
     }
     setWishlist(newWishlist);
 
-    // Sync with backend / local
     const syncedIds = await toggleWishlistBackend(product.id);
     localStorage.setItem('auraglow_wishlist', JSON.stringify(syncedIds));
+    return true;
   };
 
   const isInWishlist = (productId) => {
@@ -133,9 +152,23 @@ export function CartProvider({ children }) {
         clearCart,
         toggleWishlist,
         isInWishlist,
+        requireAuth: (actionMsg) => {
+          if (!user) {
+            setAuthActionName(actionMsg || 'perform this action');
+            setAuthModalOpen(true);
+            return true;
+          }
+          return false;
+        }
       }}
     >
       {children}
+      <AuthRequiredModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        actionName={authActionName}
+      />
     </CartContext.Provider>
   );
 }
+

@@ -9,6 +9,7 @@ export default function Register() {
   const { loginSuccess } = useAuth();
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   function handleChange(e) {
@@ -21,11 +22,13 @@ export default function Register() {
     setLoading(true);
     try {
       const data = await registerUser(form);
+      setSuccessMsg('🎉 Account created successfully! Welcome to AuraGlow. Redirecting to your Skin Quiz...');
       loginSuccess(data);
-      navigate('/skin-quiz');
+      setTimeout(() => {
+        navigate('/skin-quiz');
+      }, 1200);
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong. Please try again.');
-    } finally {
       setLoading(false);
     }
   }
@@ -39,6 +42,11 @@ export default function Register() {
 
         <div className="auth-card">
           {error && <div className="alert-banner">{error}</div>}
+          {successMsg && (
+            <div className="alert-banner" style={{ background: 'rgba(126, 200, 160, 0.18)', border: '1px solid var(--color-success)', color: 'var(--color-success)', marginBottom: 'var(--space-4)' }}>
+              {successMsg}
+            </div>
+          )}
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label className="form-label">Full Name</label>
@@ -77,8 +85,15 @@ export default function Register() {
                 minLength={8}
               />
             </div>
-            <button className="btn btn-primary" type="submit" disabled={loading}>
-              {loading ? <span className="spinner" /> : 'Sign Up'}
+            <button className="btn btn-primary" type="submit" disabled={loading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              {loading ? (
+                <>
+                  <span className="spinner" />
+                  <span>Creating Account...</span>
+                </>
+              ) : (
+                'Sign Up'
+              )}
             </button>
           </form>
           <p className="form-footer-text">
