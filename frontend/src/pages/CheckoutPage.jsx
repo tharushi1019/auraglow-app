@@ -4,6 +4,7 @@ import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
 import { useCart } from '@/context/CartContext';
 import { useCurrency } from '@/context/CurrencyContext';
+import { useAuth } from '@/context/AuthContext';
 
 /* ─── Step Indicator ─────────────────────────────────────────────────────── */
 function StepIndicator({ current }) {
@@ -461,16 +462,32 @@ function ReviewStep({ delivery, payment, cart, formatPrice, subtotal, discount, 
 export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const { formatPrice } = useCurrency();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
   const [placing, setPlacing] = useState(false);
 
   const [delivery, setDelivery] = useState({
-    firstName: '', lastName: '', email: '', phone: '',
+    firstName: user?.name ? user.name.split(' ')[0] : '',
+    lastName: user?.name ? user.name.split(' ').slice(1).join(' ') : '',
+    email: user?.email || '',
+    phone: user?.phone || '',
     address1: '', address2: '', city: '', province: '', postalCode: '',
     country: 'Sri Lanka', note: '',
   });
+
+  useEffect(() => {
+    if (user) {
+      setDelivery(prev => ({
+        ...prev,
+        firstName: prev.firstName || (user.name ? user.name.split(' ')[0] : ''),
+        lastName: prev.lastName || (user.name ? user.name.split(' ').slice(1).join(' ') : ''),
+        email: prev.email || user.email || '',
+        phone: prev.phone || user.phone || '',
+      }));
+    }
+  }, [user]);
 
   const [payment, setPayment] = useState({
     cardNumber: '', cardName: '', expiry: '', cvv: '',
@@ -486,17 +503,71 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async () => {
     setPlacing(true);
-    // Simulate Stripe payment processing delay
-    await new Promise(r => setTimeout(r, 2200));
 
     const lastFour = (payment.cardNumber || '').replace(/\s/g, '').slice(-4) || '4242';
     const brand = payment.cardNumber?.startsWith('5') ? 'Mastercard' : payment.cardNumber?.startsWith('3') ? 'Amex' : 'Visa';
 
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const token = localStorage.getItem('auraglow_token');
+
     try {
-      const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
-      const res = await fetch(`${API}/checkout`, {
+      // Step 1: Create Stripe PaymentIntent on backend
+      let paymentIntentId = null;
+      let stripeStatus = null;
+
+      try {
+        const intentRes = await fetch(`${API}/api/v1/checkout/create-payment-intent`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            amount: Math.round(total), // total in LKR cents equivalent — backend handles
+            currency: 'usd',
+            items: cart.map(i => ({ name: i.product?.name, quantity: i.quantity })),
+            customerEmail: delivery.email,
+          }),
+        });
+
+        if (intentRes.ok) {
+          const intentData = await intentRes.json();
+          paymentIntentId = intentData.paymentIntentId;
+
+          // Step 1.5: Confirm PaymentIntent via Stripe API
+          try {
+            const confirmRes = await fetch(`${API}/api/v1/checkout/confirm-payment-intent`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify({
+                paymentIntentId,
+                paymentMethod: 'pm_card_visa',
+              }),
+            });
+
+            if (confirmRes.ok) {
+              const confirmData = await confirmRes.json();
+              stripeStatus = confirmData.status || 'succeeded';
+              console.log('✅ [Stripe] Payment confirmed on Stripe sandbox:', stripeStatus);
+            }
+          } catch (confErr) {
+            console.warn('[Stripe] Confirmation notice:', confErr.message);
+          }
+        }
+      } catch (stripeErr) {
+        console.warn('[Stripe] PaymentIntent failed, falling back to demo mode:', stripeErr.message);
+      }
+
+      // Step 2: Place the order with optional Stripe PaymentIntent reference
+      const orderRes = await fetch(`${API}/api/v1/checkout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           items: cart.map(i => ({ productId: i.id, quantity: i.quantity, price: i.price, name: i.product?.name })),
           shippingAddress: delivery,
@@ -504,24 +575,28 @@ export default function CheckoutPage() {
           subtotal,
           discountAmount: bundleDiscount,
           shippingFee: shipping,
+          paymentIntentId,
+          stripeStatus,
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
+      if (orderRes.ok) {
+        const data = await orderRes.json();
         clearCart();
         navigate('/orders/confirm', { state: { order: data.order } });
         return;
       }
-    } catch (_) {/* fall through to local demo */}
+    } catch (_) { /* fall through to local demo */ }
 
-    // Fallback: local demo confirmation
+    // Fallback: local demo confirmation (if backend is not running)
+    await new Promise(r => setTimeout(r, 1800));
     const localOrder = {
       orderId: `AG-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
       estimatedDelivery: new Date(Date.now() + 5 * 86400000).toISOString(),
       total,
       shippingAddress: delivery,
       paymentMethod: { lastFour, brand },
+      paymentProvider: 'stripe-sandbox',
     };
     clearCart();
     navigate('/orders/confirm', { state: { order: localOrder } });
@@ -565,7 +640,7 @@ export default function CheckoutPage() {
         {/* Step Indicator */}
         <StepIndicator current={step} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 'var(--space-8)', alignItems: 'start' }}>
+        <div className="checkout-layout-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 'var(--space-8)', alignItems: 'start' }}>
 
           {/* Left: Step Content */}
           <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-2xl)', padding: 'var(--space-8)' }}>

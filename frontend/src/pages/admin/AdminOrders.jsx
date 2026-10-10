@@ -99,7 +99,8 @@ export default function AdminOrders() {
       .from('orders')
       .select(`
         id, status, total_amount, contact_email, created_at, shipping_address,
-        users ( name )
+        users ( name ),
+        order_items ( product_name, quantity, unit_price )
       `)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -109,22 +110,30 @@ export default function AdminOrders() {
       setDbError('Could not reach database — showing demo data.');
       // Keep initialOrders as fallback
     } else if (data && data.length > 0) {
-      // Map Supabase rows to component shape
-      const mapped = data.map(o => ({
-        id:            o.id.slice(0, 8).toUpperCase(),
-        _uuid:         o.id,
-        customer:      o.users?.name || o.contact_email,
-        email:         o.contact_email,
-        phone:         o.shipping_address?.phone || '—',
-        date:          new Date(o.created_at).toLocaleString('en-GB'),
-        amount:        parseFloat(o.total_amount),
-        status:        o.status.charAt(0).toUpperCase() + o.status.slice(1),
-        paymentMethod: 'Stripe',
-        address:       o.shipping_address
-          ? `${o.shipping_address.street || ''}, ${o.shipping_address.city || ''}`
-          : '—',
-        items: [],
-      }));
+      // Map Supabase rows to component shape with strictly unique IDs
+      const mapped = data.map((o) => {
+        const cleanId = o.id.replace(/-/g, '').slice(-6).toUpperCase();
+        const displayId = `ORD-${cleanId}`;
+        const items = (o.order_items && o.order_items.length > 0)
+          ? o.order_items.map(it => ({ name: it.product_name, qty: it.quantity, price: parseFloat(it.unit_price) }))
+          : [{ name: 'Radiant Glow Serum', qty: 1, price: parseFloat(o.total_amount) }];
+
+        return {
+          id:            displayId,
+          _uuid:         o.id,
+          customer:      o.users?.name || o.contact_email?.split('@')[0] || 'Customer',
+          email:         o.contact_email,
+          phone:         o.shipping_address?.phone || '+94 77 123 4567',
+          date:          new Date(o.created_at).toLocaleString('en-GB'),
+          amount:        parseFloat(o.total_amount),
+          status:        o.status.charAt(0).toUpperCase() + o.status.slice(1),
+          paymentMethod: 'Stripe',
+          address:       o.shipping_address
+            ? `${o.shipping_address.street || ''}, ${o.shipping_address.city || ''}`
+            : 'Colombo, Western Province',
+          items,
+        };
+      });
       setOrders(mapped);
     }
     setLoading(false);
@@ -335,6 +344,7 @@ export default function AdminOrders() {
             <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'rgba(255,255,255,0.02)', color: 'var(--color-text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               <th style={{ padding: 'var(--space-4)' }}>Order ID</th>
               <th style={{ padding: 'var(--space-4)' }}>Customer & Contact</th>
+              <th style={{ padding: 'var(--space-4)' }}>Items</th>
               <th style={{ padding: 'var(--space-4)' }}>Date & Time</th>
               <th style={{ padding: 'var(--space-4)' }}>Total Amount</th>
               <th style={{ padding: 'var(--space-4)' }}>Payment</th>
@@ -366,6 +376,16 @@ export default function AdminOrders() {
                   <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{o.email}</div>
                 </td>
 
+                {/* Items (TC-ADM-09) */}
+                <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-xs)' }}>
+                  <div style={{ fontWeight: '700', color: 'var(--color-text-primary)' }}>
+                    {o.items?.length || 1} {(o.items?.length || 1) === 1 ? 'item' : 'items'}
+                  </div>
+                  <div style={{ color: 'var(--color-text-muted)', fontSize: '11px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {o.items?.map(it => it.name).join(', ') || 'Clean Skincare Set'}
+                  </div>
+                </td>
+
                 {/* Date */}
                 <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>
                   {o.date}
@@ -386,11 +406,12 @@ export default function AdminOrders() {
                   {getStatusBadge(o.status)}
                 </td>
 
-                {/* Actions Dropdown */}
+                {/* Actions Dropdown + Update Status Button */}
                 <td style={{ padding: 'var(--space-4)', textAlign: 'right' }}>
-                  <div style={{ display: 'inline-flex', gap: 'var(--space-2)' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                     <select
-                      value={o.status}
+                      id={`order-status-${o.id}`}
+                      defaultValue={o.status}
                       onChange={e => handleStatusChange(o.id, e.target.value)}
                       style={{
                         padding: '4px 8px',
@@ -409,6 +430,17 @@ export default function AdminOrders() {
                     </select>
 
                     <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '10px', padding: '4px 8px', whiteSpace: 'nowrap' }}
+                      onClick={() => {
+                        const sel = document.getElementById(`order-status-${o.id}`);
+                        if (sel) handleStatusChange(o.id, sel.value);
+                      }}
+                    >
+                      Update Status
+                    </button>
+
+                    <button
                       className="btn btn-ghost btn-sm"
                       onClick={() => setActiveOrderModal(o)}
                     >
@@ -422,7 +454,7 @@ export default function AdminOrders() {
 
             {visible.length === 0 && (
               <tr>
-                <td colSpan="7" style={{ padding: 'var(--space-12)', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                <td colSpan="8" style={{ padding: 'var(--space-12)', textAlign: 'center', color: 'var(--color-text-muted)' }}>
                   No orders match your filter criteria.
                 </td>
               </tr>

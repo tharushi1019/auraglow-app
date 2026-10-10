@@ -1,23 +1,127 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
 import PersonalizedRoutineWidget from '@/components/reviews/PersonalizedRoutineWidget';
 import ProductCard from '@/components/catalog/ProductCard';
 import { products } from '@/data/mockData';
+import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
+import { askAiDermatologist } from '@/api/aiApi';
 
 export default function RecommendationsPage() {
-  const [activeSkinType, setActiveSkinType] = useState('Dry');
-  const [activeConcern, setActiveConcern] = useState('Dullness & Uneven Tone');
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const { addToCart, requireAuth } = useCart();
+  const { skinProfile, user } = useAuth();
+
+  // Read quiz completion or stored profile once safely
+  const isQuizSuccess = searchParams.get('quiz') === 'success' || location.state?.fromQuiz;
+
+  const [activeSkinType, setActiveSkinType] = useState(() => {
+    try {
+      const p = localStorage.getItem('auraglow_skin_profile');
+      const parsed = p ? JSON.parse(p) : null;
+      const prof = skinProfile || parsed;
+      if (prof?.skin_type) {
+        return prof.skin_type.charAt(0).toUpperCase() + prof.skin_type.slice(1);
+      }
+    } catch {
+      // ignore
+    }
+    return 'Combination';
+  });
+
+  const [activeConcern, setActiveConcern] = useState(() => {
+    try {
+      const p = localStorage.getItem('auraglow_skin_profile');
+      const parsed = p ? JSON.parse(p) : null;
+      const prof = skinProfile || parsed;
+      if (prof?.concerns && prof.concerns.length > 0) {
+        return prof.concerns[0];
+      }
+    } catch {
+      // ignore
+    }
+    return 'Dullness & Uneven Tone';
+  });
+
   const [toastMessage, setToastMessage] = useState(null);
+  // Track if user has manually selected a skin type — profile sync should not override it
+  const userSelectedSkinType = React.useRef(false);
+
+  // AI Consultant Chat State
+  const [aiQuestion, setAiQuestion] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiAnswer, setAiAnswer] = useState(null);
+  const [aiModelUsed, setAiModelUsed] = useState(null);
+
+  // Sync when user auth profile loads — only if user hasn't manually selected a skin type
+  useEffect(() => {
+    if (userSelectedSkinType.current) return;
+    if (skinProfile?.skin_type) {
+      const t = skinProfile.skin_type.charAt(0).toUpperCase() + skinProfile.skin_type.slice(1);
+      setActiveSkinType(t);
+    }
+    if (skinProfile?.concerns && skinProfile.concerns.length > 0) {
+      setActiveConcern(skinProfile.concerns[0]);
+    }
+  }, [skinProfile?.skin_type]);
+
+  const profileConcerns = skinProfile?.concerns || (() => {
+    try {
+      const p = localStorage.getItem('auraglow_skin_profile');
+      return p ? JSON.parse(p)?.concerns || [] : [];
+    } catch { return []; }
+  })();
+
+  const profileAllergens = skinProfile?.allergens || (() => {
+    try {
+      const p = localStorage.getItem('auraglow_skin_profile');
+      return p ? JSON.parse(p)?.allergens || [] : [];
+    } catch { return []; }
+  })();
 
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleAddToCart = (product) => {
-    showToast(`🌸 Added "${product.name}" to your shopping bag!`);
+  const handleAddToCart = async (product) => {
+    const success = await addToCart(product, 1);
+    if (success) {
+      showToast(`🌸 Added "${product.name}" to your shopping bag!`);
+    }
+  };
+
+  const handleAskAI = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      if (requireAuth) requireAuth('consult with our Senior AI Dermatologist');
+      return;
+    }
+    if (!aiQuestion.trim() || aiLoading) return;
+
+    setAiLoading(true);
+    setAiAnswer(null);
+
+    try {
+      const res = await askAiDermatologist(aiQuestion.trim(), {
+        skinType: activeSkinType,
+        concerns: profileConcerns.length ? profileConcerns : [activeConcern],
+        allergens: profileAllergens,
+      });
+
+      if (res && res.reply) {
+        setAiAnswer(res.reply);
+        setAiModelUsed(res.model || 'Google Gemini 1.5 Flash');
+      }
+    } catch (err) {
+      setAiAnswer('Our dermatological AI advisor is currently synchronizing. Based on clean beauty science, ensure daily SPF 50 application and gentle barrier hydration with Hyaluronic Acid & Ceramides.');
+      setAiModelUsed('AuraGlow Clinical Advisor');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const skinTypeButtons = [
@@ -25,14 +129,7 @@ export default function RecommendationsPage() {
     { label: 'Oily Skin', value: 'Oily', emoji: '🍃' },
     { label: 'Combination', value: 'Combination', emoji: '⚖️' },
     { label: 'Sensitive', value: 'Sensitive', emoji: '🌸' },
-  ];
-
-  const concerns = [
-    'Dullness & Uneven Tone',
-    'Dryness & Dehydration',
-    'Acne & Breakouts',
-    'Fine Lines & Wrinkles',
-    'Dark Spots & Pigmentation',
+    { label: 'Normal', value: 'Normal', emoji: '✨' },
   ];
 
   return (
@@ -69,17 +166,47 @@ export default function RecommendationsPage() {
         </div>
       )}
 
+      {/* Quiz Completion Celebratory Banner */}
+      {isQuizSuccess && (
+        <div style={{
+          marginTop: 'var(--nav-height)',
+          background: 'linear-gradient(90deg, rgba(232,114,150,0.2) 0%, rgba(184,169,217,0.2) 100%)',
+          borderBottom: '1px solid var(--color-accent-rose)',
+          padding: '14px 24px',
+          textAlign: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '12px',
+          fontSize: 'var(--text-sm)',
+          color: '#fff',
+          fontWeight: '600',
+        }}>
+          <span>🎉 <strong>Skin Quiz Completed!</strong> We calibrated your routine for <strong>{activeSkinType} Skin</strong></span>
+          {profileConcerns.length > 0 && (
+            <span style={{ opacity: 0.9, fontSize: 'var(--text-xs)' }}>
+              (Targeting: {profileConcerns.join(', ')})
+            </span>
+          )}
+          <span style={{ background: 'var(--color-accent-rose)', color: '#fff', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: '700' }}>
+            Personalized Routine Ready ↓
+          </span>
+        </div>
+      )}
+
       {/* Hero Banner */}
       <section style={{
-        marginTop: 'var(--nav-height)',
+        marginTop: isQuizSuccess ? 0 : 'var(--nav-height)',
         padding: 'var(--space-16) var(--space-10) var(--space-10)',
         background: 'linear-gradient(180deg, rgba(184, 169, 217, 0.12) 0%, rgba(13, 13, 15, 0) 100%)',
         borderBottom: '1px solid var(--color-border)',
         textAlign: 'center',
       }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(184, 169, 217, 0.15)', border: '1px solid var(--color-accent-lavender)', borderRadius: 'var(--radius-full)', padding: '6px 16px', fontSize: 'var(--text-xs)', fontWeight: '700', color: 'var(--color-accent-lavender)', textTransform: 'uppercase', marginBottom: 'var(--space-4)' }}>
-            ✨ AuraGlow AI Skincare Intelligence
+        <div style={{ maxWidth: '840px', margin: '0 auto' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(184, 169, 217, 0.15)', border: '1px solid var(--color-accent-lavender)', borderRadius: 'var(--radius-full)', padding: '6px 18px', fontSize: 'var(--text-xs)', fontWeight: '700', color: 'var(--color-accent-lavender)', textTransform: 'uppercase', marginBottom: 'var(--space-4)' }}>
+            <span>✨</span>
+            <span>Google Gemini Generative AI Skincare Intelligence</span>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-accent-sage)' }} />
           </div>
 
           <h1 style={{
@@ -94,7 +221,7 @@ export default function RecommendationsPage() {
           </h1>
 
           <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-base)', lineHeight: 1.7, margin: '0 0 var(--space-8) 0' }}>
-            No more skincare guesswork. Our algorithm pairs scientifically verified clean actives with your specific skin type and biological goals.
+            No more skincare guesswork. Our AI models scientifically pair bioactive clean ingredients with your biological skin profile and personal goals.
           </p>
 
           {/* Interactive Skin Type Quick Tabs */}
@@ -102,7 +229,7 @@ export default function RecommendationsPage() {
             {skinTypeButtons.map(st => (
               <button
                 key={st.value}
-                onClick={() => setActiveSkinType(st.value)}
+                onClick={() => { userSelectedSkinType.current = true; setActiveSkinType(st.value); }}
                 style={{
                   background: activeSkinType === st.value ? 'linear-gradient(135deg, var(--color-accent-rose), var(--color-accent-lavender))' : 'var(--color-bg-secondary)',
                   border: activeSkinType === st.value ? '1px solid transparent' : '1px solid var(--color-border)',
@@ -132,18 +259,23 @@ export default function RecommendationsPage() {
         
         {/* 1. Personalized Routine Widget */}
         <section>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
             <div>
-              <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: '800', fontFamily: 'var(--font-heading)', color: 'var(--color-text-primary)', margin: 0 }}>
-                Step-by-Step Custom Regimen
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: '800', fontFamily: 'var(--font-heading)', color: 'var(--color-text-primary)', margin: 0 }}>
+                  Step-by-Step AI Regimen
+                </h2>
+                <span style={{ background: 'rgba(126, 200, 160, 0.15)', color: 'var(--color-accent-sage)', border: '1px solid rgba(126, 200, 160, 0.3)', borderRadius: 'var(--radius-full)', padding: '2px 8px', fontSize: '11px', fontWeight: '700' }}>
+                  AI Powered
+                </span>
+              </div>
               <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', margin: '4px 0 0 0' }}>
-                Scientifically optimized layer-by-layer for peak cellular absorption.
+                Scientifically optimized layer-by-layer for peak trans-epidermal absorption.
               </p>
             </div>
 
             <Link to="/skin-quiz" className="btn btn-secondary btn-sm btn-pill">
-              Retake 5-Question Quiz 🌸
+              Retake 4-Step Quiz 🌸
             </Link>
           </div>
 
@@ -154,7 +286,82 @@ export default function RecommendationsPage() {
           />
         </section>
 
-        {/* 2. Key Actives Deep Dive Matrix */}
+        {/* 2. Interactive AI Skincare Consultation Terminal */}
+        <section style={{
+          background: 'linear-gradient(135deg, rgba(232, 114, 150, 0.08) 0%, rgba(184, 169, 217, 0.08) 100%)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-2xl)',
+          padding: 'var(--space-8)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'var(--space-3)' }}>
+            <span style={{ fontSize: '24px' }}>🤖</span>
+            <div>
+              <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: '800', fontFamily: 'var(--font-heading)', color: 'var(--color-text-primary)', margin: 0 }}>
+                Ask AuraGlow AI Dermatologist
+              </h3>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: '2px 0 0 0' }}>
+                Instant dermatological consultation for your specific skin type ({activeSkinType})
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleAskAI} style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-4)', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              value={aiQuestion}
+              onChange={(e) => setAiQuestion(e.target.value)}
+              placeholder="e.g., Can I combine Vitamin C with Niacinamide? What helps with hormonal acne?"
+              className="input"
+              style={{ flex: 1, minWidth: '280px', padding: '12px 18px', fontSize: 'var(--text-sm)', borderRadius: 'var(--radius-xl)' }}
+            />
+            <button
+              type="submit"
+              disabled={aiLoading || !aiQuestion.trim()}
+              className="btn btn-primary btn-pill"
+              style={{ padding: '12px 24px', fontWeight: '700', fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              {aiLoading ? (
+                <>
+                  <span className="spinner" />
+                  Consulting AI...
+                </>
+              ) : (
+                <>
+                  <span>✨</span> Ask AI
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* AI Response Display */}
+          {aiAnswer && (
+            <div style={{
+              marginTop: 'var(--space-6)',
+              background: 'var(--color-bg-secondary)',
+              border: '1px solid rgba(232, 114, 150, 0.3)',
+              borderRadius: 'var(--radius-xl)',
+              padding: 'var(--space-6)',
+              animation: 'fadeIn 0.3s ease',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: '700', color: 'var(--color-accent-rose)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Clinical AI Consultation Report
+                </span>
+                {aiModelUsed && (
+                  <span style={{ fontSize: '11px', color: 'var(--color-accent-sage)', background: 'rgba(126, 200, 160, 0.15)', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontWeight: '600' }}>
+                    🟢 {aiModelUsed}
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.8, whiteSpace: 'pre-line' }}>
+                {aiAnswer}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* 3. Key Actives Deep Dive Matrix */}
         <section style={{
           background: 'var(--color-bg-card)',
           border: '1px solid var(--color-border)',
@@ -205,7 +412,7 @@ export default function RecommendationsPage() {
           </div>
         </section>
 
-        {/* 3. Top Recommended Formulas */}
+        {/* 4. Top Recommended Formulas */}
         <section>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
             <div>

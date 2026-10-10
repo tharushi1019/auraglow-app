@@ -8,11 +8,21 @@
 -- Enable UUID generation
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Drop existing tables if they exist with mismatched column types (e.g. bigint vs uuid)
+DROP TABLE IF EXISTS reviews CASCADE;
+DROP TABLE IF EXISTS order_items CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS cart_items CASCADE;
+DROP TABLE IF EXISTS wishlist_items CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS skin_profiles CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
 -- =============================================================================
 -- TABLE: users
 -- Stores all user accounts (customers and admins)
 -- =============================================================================
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE users (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name           VARCHAR(255)  NOT NULL,
   email          VARCHAR(255)  NOT NULL UNIQUE,
@@ -23,11 +33,12 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
+
 -- =============================================================================
 -- TABLE: skin_profiles
 -- Stores user's skin quiz results (1:1 with users)
 -- =============================================================================
-CREATE TABLE IF NOT EXISTS skin_profiles (
+CREATE TABLE skin_profiles (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   skin_type   VARCHAR(50)  NOT NULL CHECK (skin_type IN ('dry', 'oily', 'combination', 'sensitive')),
@@ -43,7 +54,7 @@ CREATE TABLE IF NOT EXISTS skin_profiles (
 -- TABLE: products
 -- Full product catalogue with metadata
 -- =============================================================================
-CREATE TABLE IF NOT EXISTS products (
+CREATE TABLE products (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name                  VARCHAR(255)  NOT NULL,
   brand                 VARCHAR(255)  NOT NULL,
@@ -74,7 +85,7 @@ CREATE INDEX IF NOT EXISTS idx_products_stock ON products(stock_quantity);
 -- TABLE: wishlist_items
 -- User wishlists (many users → many products)
 -- =============================================================================
-CREATE TABLE IF NOT EXISTS wishlist_items (
+CREATE TABLE wishlist_items (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   product_id  UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -86,7 +97,8 @@ CREATE TABLE IF NOT EXISTS wishlist_items (
 -- TABLE: cart_items
 -- Persistent shopping cart (stored in DB, not localStorage)
 -- =============================================================================
-CREATE TABLE IF NOT EXISTS cart_items (
+CREATE TABLE cart_items (
+
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id        UUID    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   product_id     UUID    NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -142,7 +154,7 @@ CREATE TABLE IF NOT EXISTS order_items (
 -- TABLE: reviews
 -- Customer product reviews (one review per user-product)
 -- =============================================================================
-CREATE TABLE IF NOT EXISTS reviews (
+CREATE TABLE reviews (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   product_id  UUID    NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -154,6 +166,7 @@ CREATE TABLE IF NOT EXISTS reviews (
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, product_id)   -- one review per user per product
 );
+
 
 CREATE INDEX IF NOT EXISTS idx_reviews_product_id ON reviews(product_id);
 

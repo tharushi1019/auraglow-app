@@ -22,15 +22,18 @@ export default function ProductCard({
     ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
     : 0;
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (isOutOfStock) return;
-    setAdded(true);
-    addToCart(product, 1);
-    if (onAddToCart) onAddToCart(product);
-    setTimeout(() => setAdded(false), 1800);
+    const addedSuccess = await addToCart(product, 1);
+    if (addedSuccess) {
+      setAdded(true);
+      if (onAddToCart) onAddToCart(product);
+      setTimeout(() => setAdded(false), 1800);
+    }
   };
+
 
   const handleToggleWishlist = (e) => {
     e.preventDefault();

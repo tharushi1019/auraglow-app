@@ -5,6 +5,11 @@
  * =============================================================================
  */
 
+const supabase = require('../config/supabaseClient');
+const { initialProducts } = require('./product.controller');
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 let initialReviews = [
   {
     id: 'rev-001',
@@ -119,6 +124,83 @@ exports.getProductReviews = async (req, res, next) => {
     const { star, skinType, verifiedOnly, sort = 'recent', page = 1, limit = 10 } = req.query;
 
     let reviews = initialReviews.filter(r => r.productId === productId);
+
+    // Fetch persisted reviews from Supabase (only if productId is a valid UUID)
+    if (supabase) {
+      try {
+        const isUuid = UUID_REGEX.test(productId);
+        if (isUuid) {
+          const { data: dbReviews, error: sbErr } = await supabase
+            .from('reviews')
+            .select('*, users(name, avatar)')
+            .eq('product_id', productId);
+
+          if (!sbErr && dbReviews && dbReviews.length > 0) {
+            const mapped = dbReviews.map(r => ({
+              id: r.id,
+              productId: r.product_id,
+              userId: r.user_id || 'usr-guest',
+              userName: r.users?.name || 'Verified Customer',
+              userAvatar: r.users?.avatar || 'https://randomuser.me/api/portraits/women/17.jpg',
+              skinType: r.skin_type || 'Normal / Combination',
+              skinConcern: r.skin_concern || 'General Glow',
+              rating: Number(r.rating) || 5,
+              title: r.title || 'Loving this product!',
+              comment: r.comment || '',
+              verified: r.is_verified ?? true,
+              recommend: true,
+              helpfulVotes: r.helpful_count || 0,
+              votedUsers: [],
+              createdAt: r.created_at || new Date().toISOString(),
+            }));
+
+            mapped.forEach(m => {
+              if (!reviews.some(r => r.id === m.id)) {
+                reviews.unshift(m);
+              }
+            });
+          }
+        } else {
+          // Non-UUID id (e.g. 'prod-001'): look up the matching Supabase UUID by product name
+          const mockProd = initialProducts.find(p => p.id === productId);
+          if (mockProd) {
+            const { data: dbProd } = await supabase
+              .from('products')
+              .select('id')
+              .ilike('name', mockProd.name)
+              .maybeSingle();
+            if (dbProd?.id) {
+              const { data: dbReviews } = await supabase
+                .from('reviews')
+                .select('*, users(name, avatar)')
+                .eq('product_id', dbProd.id);
+              (dbReviews || []).forEach(r => {
+                const mapped = {
+                  id: r.id,
+                  productId: productId, // keep original for in-memory merging
+                  userId: r.user_id || 'usr-guest',
+                  userName: r.users?.name || 'Verified Customer',
+                  userAvatar: r.users?.avatar || 'https://randomuser.me/api/portraits/women/17.jpg',
+                  skinType: r.skin_type || 'Normal / Combination',
+                  skinConcern: r.skin_concern || 'General Glow',
+                  rating: Number(r.rating) || 5,
+                  title: r.title || 'Loving this product!',
+                  comment: r.comment || '',
+                  verified: r.is_verified ?? true,
+                  recommend: true,
+                  helpfulVotes: r.helpful_count || 0,
+                  votedUsers: [],
+                  createdAt: r.created_at || new Date().toISOString(),
+                };
+                if (!reviews.some(rv => rv.id === mapped.id)) reviews.unshift(mapped);
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('⚠️ [Reviews] Supabase fetch note:', err.message);
+      }
+    }
 
     // If no reviews found for this specific product, provide sample seeded ones so UI is rich
     if (reviews.length === 0) {
@@ -292,6 +374,56 @@ exports.createReview = async (req, res, next) => {
       votedUsers: [],
       createdAt: new Date().toISOString(),
     };
+
+    // Persist review to Supabase reviews table
+    if (supabase) {
+      try {
+        let dbProductId = productId;
+        const isUuid = UUID_REGEX.test(productId);
+        if (!isUuid) {
+          // Resolve mock ID to the correct Supabase UUID by matching product name
+          const mockProd = initialProducts.find(p => p.id === productId);
+          if (mockProd) {
+            const { data: matchedProd } = await supabase
+              .from('products')
+              .select('id')
+              .ilike('name', mockProd.name)
+              .maybeSingle();
+            if (matchedProd?.id) dbProductId = matchedProd.id;
+          }
+          // If no name match found, leave dbProductId as the mock ID so the
+          // catch block below handles any resulting DB error gracefully.
+        }
+
+        const validUserUuid = req.user?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.user.id)
+          ? req.user.id
+          : null;
+
+        const { data: dbInserted, error: insertErr } = await supabase
+          .from('reviews')
+          .insert([{
+            product_id: dbProductId,
+            user_id: validUserUuid,
+            rating: Number(rating),
+            title: title || 'Loving this product!',
+            comment,
+            skin_type: skinType || null,
+            skin_concern: skinConcern || null,
+            is_verified: true,
+            helpful_count: 0,
+          }])
+          .select('id')
+          .maybeSingle();
+
+        if (!insertErr && dbInserted?.id) {
+          newReview.id = dbInserted.id;
+        } else if (insertErr) {
+          console.warn('⚠️ Supabase review insert notice:', insertErr.message);
+        }
+      } catch (sbErr) {
+        console.warn('⚠️ Supabase review save fallback:', sbErr.message);
+      }
+    }
 
     initialReviews.unshift(newReview);
 

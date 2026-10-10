@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Footer() {
+  const { user } = useAuth();
+  const isAdmin = user && user.role === 'admin';
   const [email, setEmail] = useState('');
   const [joined, setJoined] = useState(false);
   const [showTop, setShowTop] = useState(false);
@@ -103,7 +106,26 @@ export default function Footer() {
             <li><Link to="/skin-quiz" style={{ color: 'var(--color-accent-rose)', textDecoration: 'none', fontSize: 'var(--text-sm)', fontWeight: '600' }}>✨ Take Skin Quiz</Link></li>
             <li><Link to="/profile" style={{ color: 'var(--color-text-secondary)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>My Skin Profile</Link></li>
             <li><Link to="/cart" style={{ color: 'var(--color-text-secondary)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>Shopping Bag</Link></li>
-            <li><Link to="/admin" style={{ color: 'var(--color-text-muted)', textDecoration: 'none', fontSize: 'var(--text-xs)' }}>Admin Portal</Link></li>
+            {isAdmin && (
+              <li>
+                <Link to="/admin" style={{ color: 'var(--color-accent-lavender)', textDecoration: 'none', fontSize: 'var(--text-xs)', fontWeight: '600' }}>
+                  👑 Admin Portal
+                </Link>
+              </li>
+            )}
+          </ul>
+        </div>
+
+        {/* Support */}
+        <div>
+          <h4 style={{ color: 'var(--color-text-primary)', fontSize: 'var(--text-sm)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 'var(--space-4)' }}>
+            Customer Support
+          </h4>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            <li><Link to="/support" style={{ color: 'var(--color-text-secondary)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>Help Center &amp; FAQ</Link></li>
+            <li><Link to="/support" style={{ color: 'var(--color-text-secondary)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>Contact Us</Link></li>
+            <li><Link to="/support" style={{ color: 'var(--color-text-secondary)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>Shipping &amp; Delivery</Link></li>
+            <li><Link to="/orders" style={{ color: 'var(--color-text-secondary)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>Track My Order</Link></li>
           </ul>
         </div>
 

@@ -334,9 +334,11 @@
    ========================================================================== */
 
 .spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid rgba(232, 180, 160, 0.2);
+  display: inline-block;
+  vertical-align: middle;
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(232, 180, 160, 0.25);
   border-top-color: var(--color-accent-rose);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -577,4 +579,19 @@
 
 .tracker-connector.completed {
   background: var(--color-success);
+}
+
+/* ==========================================================================
+   📱 NAVBAR RESPONSIVE RULES
+   ========================================================================== */
+@media (max-width: 860px) {
+  .desktop-nav-links {
+    display: none !important;
+  }
+  .mobile-nav-toggle {
+    display: block !important;
+  }
+  .nav-quiz-btn {
+    display: none !important;
+  }
 }
