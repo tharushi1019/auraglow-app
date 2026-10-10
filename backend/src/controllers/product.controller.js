@@ -7,10 +7,38 @@
 
 const supabase = require('../config/supabaseClient');
 
+const LEGACY_PRODUCT_ID_MAP = {
+  'prod-001': 'b2000000-0000-0000-0000-000000000001',
+  'prod-002': 'b2000000-0000-0000-0000-000000000002',
+  'prod-003': 'b2000000-0000-0000-0000-000000000003',
+  'prod-004': 'b2000000-0000-0000-0000-000000000004',
+  'prod-005': 'b2000000-0000-0000-0000-000000000005',
+  'prod-006': 'b2000000-0000-0000-0000-000000000006',
+  'prod-007': 'b2000000-0000-0000-0000-000000000007',
+  'prod-008': 'b2000000-0000-0000-0000-000000000008',
+};
+
+function resolveProductId(id) {
+  if (!id || typeof id !== 'string') return id;
+  const trimmed = id.trim();
+  if (!trimmed) return trimmed;
+  const legacyMatch = LEGACY_PRODUCT_ID_MAP[trimmed.toLowerCase()];
+  if (legacyMatch) return legacyMatch;
+  return trimmed;
+}
+
+function normalizeProductRecord(product) {
+  if (!product || !product.id) return product;
+  return {
+    ...product,
+    id: resolveProductId(product.id),
+  };
+}
+
 // Fallback seed / mock data in case Supabase client is not configured
 const initialProducts = [
   {
-    id: 'prod-001',
+    id: 'b2000000-0000-0000-0000-000000000001',
     name: 'Radiant Glow Serum',
     brand: 'AuraGlow',
     category: 'skincare',
@@ -36,7 +64,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-002',
+    id: 'b2000000-0000-0000-0000-000000000002',
     name: 'Velvet Matte Lipstick',
     brand: 'AuraGlow',
     category: 'makeup',
@@ -61,7 +89,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-003',
+    id: 'b2000000-0000-0000-0000-000000000003',
     name: 'Petal Hydra Cream',
     brand: 'AuraGlow',
     category: 'skincare',
@@ -86,7 +114,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-004',
+    id: 'b2000000-0000-0000-0000-000000000004',
     name: 'Rose Gold Eye Palette',
     brand: 'AuraGlow',
     category: 'makeup',
@@ -111,7 +139,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-005',
+    id: 'b2000000-0000-0000-0000-000000000005',
     name: 'Green Tea Cleansing Foam',
     brand: 'AuraGlow',
     category: 'skincare',
@@ -135,7 +163,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-006',
+    id: 'b2000000-0000-0000-0000-000000000006',
     name: 'Midnight Bloom Perfume',
     brand: 'AuraGlow',
     category: 'fragrance',
@@ -159,7 +187,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-007',
+    id: 'b2000000-0000-0000-0000-000000000007',
     name: 'Pro Blending Brush Set',
     brand: 'AuraGlow',
     category: 'tools',
@@ -183,7 +211,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-008',
+    id: 'b2000000-0000-0000-0000-000000000008',
     name: 'SPF 50 Sunscreen Fluid',
     brand: 'AuraGlow',
     category: 'skincare',
@@ -227,7 +255,7 @@ exports.getProducts = async (req, res, next) => {
       try {
         const { data: dbProducts, error: dbErr } = await supabase
           .from('products')
-          .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description, tags')
+          .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description, clean_beauty_tags')
           .eq('is_active', true)
           .order('created_at', { ascending: false });
 
@@ -244,7 +272,7 @@ exports.getProducts = async (req, res, next) => {
             reviewCount: 100,
             isVegan: p.is_vegan ?? false,
             isCrueltyFree: p.is_cruelty_free ?? true,
-            tags: Array.isArray(p.tags) ? p.tags : [p.category || 'skincare'],
+            tags: Array.isArray(p.clean_beauty_tags) ? p.clean_beauty_tags : [],
             badge: p.is_vegan ? '🌱 Vegan' : '🐰 Cruelty-Free',
             badgeClass: p.is_vegan ? 'badge-vegan' : 'badge-cruelty-free',
             description: p.description || '',
@@ -262,7 +290,7 @@ exports.getProducts = async (req, res, next) => {
 
     // Fallback to static mock products if Supabase returned nothing
     if (result.length === 0) {
-      result = [...initialProducts];
+      result = initialProducts.map(normalizeProductRecord);
     }
     const {
       search,
@@ -359,22 +387,16 @@ exports.getProducts = async (req, res, next) => {
 exports.getProductById = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const canonicalId = resolveProductId(id);
 
-    // Check mock data first (handles 'prod-001' style IDs)
-    const mockProduct = initialProducts.find(p => p.id === id || p.id.toLowerCase() === id.toLowerCase());
-    if (mockProduct) {
-      return res.json({ success: true, product: mockProduct });
-    }
-
-    // If not found in mock, try Supabase (handles UUID-based lookups)
     if (supabase) {
       try {
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canonicalId);
         if (isUuid) {
           const { data: dbProduct } = await supabase
             .from('products')
-            .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description, tags')
-            .eq('id', id)
+            .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description, clean_beauty_tags')
+            .eq('id', canonicalId)
             .maybeSingle();
           if (dbProduct) {
             return res.json({
@@ -388,7 +410,7 @@ exports.getProductById = async (req, res, next) => {
                 stock: dbProduct.stock_quantity ?? 0,
                 isVegan: dbProduct.is_vegan ?? false,
                 isCrueltyFree: dbProduct.is_cruelty_free ?? true,
-                tags: Array.isArray(dbProduct.tags) ? dbProduct.tags : [dbProduct.category],
+                tags: Array.isArray(dbProduct.clean_beauty_tags) ? dbProduct.clean_beauty_tags : [],
                 description: dbProduct.description || '',
                 ingredients: [],
                 image: (Array.isArray(dbProduct.images) && dbProduct.images.length > 0)
@@ -404,6 +426,13 @@ exports.getProductById = async (req, res, next) => {
       }
     }
 
+    const mockProduct = initialProducts
+      .map(normalizeProductRecord)
+      .find(p => resolveProductId(p.id) === canonicalId || p.id.toLowerCase() === canonicalId.toLowerCase());
+    if (mockProduct) {
+      return res.json({ success: true, product: mockProduct });
+    }
+
     return res.status(404).json({
       success: false,
       message: `Product with ID '${id}' not found`,
@@ -412,6 +441,8 @@ exports.getProductById = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.resolveProductId = resolveProductId;
 
 /**
  * GET /api/v1/products/categories
@@ -453,7 +484,8 @@ exports.getFeaturedProducts = async (req, res, next) => {
 exports.getRelatedProducts = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const product = initialProducts.find(p => p.id === id);
+    const canonicalId = resolveProductId(id);
+    const product = initialProducts.find(p => resolveProductId(p.id) === canonicalId || p.id.toLowerCase() === canonicalId.toLowerCase());
 
     let related = [];
     if (product) {

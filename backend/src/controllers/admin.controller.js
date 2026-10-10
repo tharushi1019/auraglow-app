@@ -9,9 +9,9 @@ const supabase = require('../config/supabaseClient');
 
 // Fallback mock stores
 let mockProducts = [
-  { id: 'prod-001', name: 'Radiant Glow Serum', brand: 'AuraGlow', category: 'skincare', price: 8900, stock: 45 },
-  { id: 'prod-002', name: 'Velvet Matte Lipstick', brand: 'AuraGlow', category: 'makeup', price: 4500, stock: 12 },
-  { id: 'prod-003', name: 'Petal Hydra Cream', brand: 'AuraGlow', category: 'skincare', price: 7200, stock: 0 },
+  { id: 'b2000000-0000-0000-0000-000000000001', name: 'Radiant Glow Serum', brand: 'AuraGlow', category: 'skincare', price: 8900, stock: 45 },
+  { id: 'b2000000-0000-0000-0000-000000000002', name: 'Velvet Matte Lipstick', brand: 'AuraGlow', category: 'makeup', price: 4500, stock: 12 },
+  { id: 'b2000000-0000-0000-0000-000000000003', name: 'Petal Hydra Cream', brand: 'AuraGlow', category: 'skincare', price: 7200, stock: 0 },
 ];
 
 let mockOrders = [
@@ -71,24 +71,67 @@ exports.getAdminProducts = async (req, res, next) => {
 exports.createProduct = async (req, res, next) => {
   try {
     const { name, brand = 'AuraGlow', category, price, stock = 10, description, images = [] } = req.body;
-    if (!name || !category || !price) {
-      return res.status(400).json({ success: false, message: 'Name, category, and price are required.' });
+    const normalizedName = typeof name === 'string' ? name.trim() : '';
+    const normalizedBrand = typeof brand === 'string' ? brand.trim() : '';
+    const normalizedCategory = typeof category === 'string' ? category.trim().toLowerCase() : '';
+    const numericPrice = typeof price === 'number'
+      ? price
+      : (typeof price === 'string' && price.trim() ? Number(price) : NaN);
+    const numericStock = typeof stock === 'number'
+      ? stock
+      : (typeof stock === 'string' && stock.trim() ? Number(stock) : NaN);
+    const validCategories = ['skincare', 'makeup', 'tools', 'fragrance'];
+
+    if (!normalizedName || !normalizedBrand || !validCategories.includes(normalizedCategory)) {
+      return res.status(400).json({ success: false, message: 'Name, brand, and a valid product category are required.' });
+    }
+    if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+      return res.status(400).json({ success: false, message: 'Price must be a finite number greater than zero.' });
+    }
+    if (!Number.isInteger(numericStock) || numericStock < 0) {
+      return res.status(400).json({ success: false, message: 'Stock must be a nonnegative integer.' });
     }
 
-    const newProd = {
-      id: `prod-${Date.now()}`,
-      name,
-      brand,
-      category,
-      price: Number(price),
-      stock: Number(stock),
-      description: description || 'Luxury clean beauty formula.',
-      images: Array.isArray(images) ? images : [images],
-      created_at: new Date().toISOString(),
-    };
+    const crypto = require('crypto');
+    const canonicalProductId = crypto.randomUUID();
 
-    mockProducts.unshift(newProd);
-    return res.status(201).json({ success: true, message: 'Product created successfully.', product: newProd });
+    if (!supabase) {
+      return res.status(503).json({ success: false, message: 'Product database is unavailable.' });
+    }
+
+    try {
+      const { data: inserted, error: insertErr } = await supabase
+        .from('products')
+        .insert([{
+          id: canonicalProductId,
+          name: normalizedName,
+          brand: normalizedBrand,
+          category: normalizedCategory,
+          price: numericPrice,
+          stock_quantity: numericStock,
+          description: description || 'Luxury clean beauty formula.',
+          images: Array.isArray(images) ? images : (images ? [images] : []),
+          clean_beauty_tags: [],
+          is_vegan: false,
+          is_cruelty_free: true,
+          is_active: true,
+        }])
+        .select()
+        .maybeSingle();
+
+      if (insertErr) {
+        console.warn('⚠️ [Admin createProduct] Supabase insert failed:', insertErr.message);
+        return res.status(502).json({ success: false, message: 'Product could not be saved to the database.' });
+      }
+      if (!inserted) {
+        return res.status(502).json({ success: false, message: 'Product was not returned after database insertion.' });
+      }
+
+      return res.status(201).json({ success: true, message: 'Product created successfully.', product: inserted });
+    } catch (sbErr) {
+      console.warn('⚠️ [Admin createProduct] Supabase insert failed:', sbErr.message);
+      return res.status(502).json({ success: false, message: 'Product could not be saved to the database.' });
+    }
   } catch (err) {
     next(err);
   }
