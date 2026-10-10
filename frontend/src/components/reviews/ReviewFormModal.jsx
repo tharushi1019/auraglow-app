@@ -11,12 +11,9 @@ export default function ReviewFormModal({
   const [hoverRating, setHoverRating] = useState(0);
   const [title, setTitle] = useState('');
   const [comment, setComment] = useState('');
-  const [userName, setUserName] = useState('');
-  const [skinType, setSkinType] = useState('Combination');
-  const [skinConcern, setSkinConcern] = useState('Dullness & Uneven Tone');
-  const [recommend, setRecommend] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   if (!isOpen) return null;
 
@@ -25,29 +22,29 @@ export default function ReviewFormModal({
     if (!title.trim() || !comment.trim() || comment.length < 10) return;
 
     setIsSubmitting(true);
+    setSubmitError('');
     const payload = {
       productId,
       rating,
       title: title.trim(),
       comment: comment.trim(),
-      userName: userName.trim() || 'Verified Customer',
-      skinType,
-      skinConcern,
-      recommend,
     };
 
-    if (onSubmit) {
+    try {
+      if (!onSubmit) throw new Error('Review submission is unavailable.');
       await onSubmit(payload);
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsSuccess(false);
+        onClose();
+        setTitle('');
+        setComment('');
+      }, 1600);
+    } catch (error) {
+      setSubmitError(error.message || 'Review could not be saved.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
-    setIsSuccess(true);
-    setTimeout(() => {
-      setIsSuccess(false);
-      onClose();
-      setTitle('');
-      setComment('');
-    }, 1600);
   };
 
   return (
@@ -195,70 +192,11 @@ export default function ReviewFormModal({
                 />
               </div>
 
-              {/* Skin Profile Selectors Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-                <div>
-                  <label style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 'var(--space-1)' }}>
-                    Your Skin Type
-                  </label>
-                  <select
-                    value={skinType}
-                    onChange={e => setSkinType(e.target.value)}
-                    className="input"
-                    style={{ background: 'var(--color-bg-secondary)', cursor: 'pointer' }}
-                  >
-                    <option value="Dry">Dry Skin</option>
-                    <option value="Oily">Oily Skin</option>
-                    <option value="Combination">Combination Skin</option>
-                    <option value="Sensitive">Sensitive Skin</option>
-                    <option value="Normal">Normal Skin</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 'var(--space-1)' }}>
-                    Primary Skin Concern
-                  </label>
-                  <select
-                    value={skinConcern}
-                    onChange={e => setSkinConcern(e.target.value)}
-                    className="input"
-                    style={{ background: 'var(--color-bg-secondary)', cursor: 'pointer' }}
-                  >
-                    <option value="Dullness & Uneven Tone">Dullness & Tone</option>
-                    <option value="Dryness & Dehydration">Dryness & Hydration</option>
-                    <option value="Acne & Breakouts">Acne & Breakouts</option>
-                    <option value="Fine Lines & Wrinkles">Aging & Fine Lines</option>
-                    <option value="Dark Spots & Pigmentation">Dark Spots</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Display Name */}
-              <div>
-                <label style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 'var(--space-1)' }}>
-                  Your Name / Nickname
-                </label>
-                <input
-                  type="text"
-                  value={userName}
-                  onChange={e => setUserName(e.target.value)}
-                  placeholder="e.g. Sasha R. (optional)"
-                  className="input"
-                />
-              </div>
-
-              {/* Recommend Checkbox */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', marginTop: 'var(--space-1)' }}>
-                <input
-                  type="checkbox"
-                  checked={recommend}
-                  onChange={e => setRecommend(e.target.checked)}
-                  style={{ width: '16px', height: '16px', accentColor: 'var(--color-accent-sage)' }}
-                />
-                <span>I recommend this clean beauty product to a friend 👍</span>
-              </label>
-
+              {submitError && (
+                <p role="alert" style={{ color: 'var(--color-accent-rose)', fontSize: 'var(--text-sm)', margin: 0 }}>
+                  {submitError}
+                </p>
+              )}
               {/* Form Buttons */}
               <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
                 <button
