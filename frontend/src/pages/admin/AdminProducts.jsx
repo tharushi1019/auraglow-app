@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useCurrency } from '@/context/CurrencyContext';
 import { supabase } from '@/lib/supabase';
 import { products as mockProducts } from '@/data/mockData';
+import { uploadImageToImgBB } from '@/services/imgbbService';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -23,14 +24,23 @@ function getStatusBadge(status) {
 
 // Map Supabase product row → table-friendly shape
 function normalize(p) {
+  const rawImages = Array.isArray(p.images)
+    ? p.images
+    : (typeof p.images === 'string' && p.images.startsWith('[')
+        ? (() => { try { return JSON.parse(p.images); } catch { return [p.images]; } })()
+        : (p.images ? [p.images] : []));
+
   return {
-    id:       p.id,
-    name:     p.name,
-    category: p.category ? p.category.charAt(0).toUpperCase() + p.category.slice(1) : '—',
-    price:    parseFloat(p.price) || 0,
-    stock:    p.stock_quantity ?? 0,
-    status:   getStatus(p.stock_quantity ?? 0),
-    brand:    p.brand,
+    id:          p.id,
+    name:        p.name,
+    category:    p.category ? p.category.charAt(0).toUpperCase() + p.category.slice(1) : '—',
+    price:       parseFloat(p.price) || 0,
+    stock:       p.stock_quantity ?? 0,
+    status:      getStatus(p.stock_quantity ?? 0),
+    brand:       p.brand || 'AuraGlow',
+    description: p.description || '',
+    images:      rawImages,
+    image:       rawImages[0] || 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=150&q=80',
   };
 }
 
@@ -39,18 +49,20 @@ function normalize(p) {
 export default function AdminProducts() {
   const [searchParams] = useSearchParams();
   const { formatPrice } = useCurrency();
-  const [products, setProducts]     = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [search, setSearch]         = useState(() => searchParams.get('search') || '');
+  const [products, setProducts]             = useState([]);
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState(null);
+  const [search, setSearch]                 = useState(() => searchParams.get('search') || '');
   const [filterCategory, setFilterCategory] = useState('All');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [showAddModal, setShowAddModal]      = useState(false);
-  const [editProduct, setEditProduct]        = useState(null);
+  const [page, setPage]                     = useState(1);
+  const [pageSize, setPageSize]             = useState(10);
+  const [showAddModal, setShowAddModal]     = useState(false);
+  const [editProduct, setEditProduct]       = useState(null);
   const [saving, setSaving]                 = useState(false);
+  const [uploading, setUploading]           = useState(false);
+  const [uploadError, setUploadError]       = useState('');
   const [newProduct, setNewProduct] = useState({
-    name: '', category: 'skincare', price: '', stock: '', description: '',
+    name: '', category: 'skincare', price: '', stock: '', description: '', image: '', images: [],
   });
 
   // Page title
@@ -68,13 +80,12 @@ export default function AdminProducts() {
     setError(null);
     const { data, error: err } = await supabase
       .from('products')
-      .select('id, name, brand, category, price, stock_quantity')
+      .select('id, name, brand, category, price, stock_quantity, images, description')
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
     if (err) {
       console.error('[AdminProducts] Supabase error:', err.message);
-      // Graceful fallback to mockData so the UI never breaks
       setProducts(mockProducts.map(normalize));
       setError('Could not reach database — showing demo data.');
     } else {
@@ -83,11 +94,44 @@ export default function AdminProducts() {
     setLoading(false);
   }
 
+  // ── Image Upload via ImgBB ────────────────────────────────────────────────
+  async function handleImageUpload(file, target = 'edit') {
+    if (!file) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      const res = await uploadImageToImgBB(file);
+      if (res && res.url) {
+        if (target === 'edit') {
+          setEditProduct(prev => ({
+            ...prev,
+            image: res.url,
+            images: [res.url, ...(prev.images || []).filter(u => u !== res.url)],
+          }));
+        } else {
+          setNewProduct(prev => ({
+            ...prev,
+            image: res.url,
+            images: [res.url, ...(prev.images || []).filter(u => u !== res.url)],
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('[AdminProducts] Upload failed:', err.message);
+      setUploadError(err.message || 'Image upload failed. You can also paste an image URL directly.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
   // ── Add product ───────────────────────────────────────────────────────────
   async function handleAddProduct(e) {
     e.preventDefault();
     setSaving(true);
     const stockVal = parseInt(newProduct.stock) || 0;
+    const primaryImg = (newProduct.image || (newProduct.images && newProduct.images[0]) || '').trim();
+    const imagesToSave = primaryImg ? [primaryImg, ...(newProduct.images || []).filter(u => u !== primaryImg)] : [];
+
     const payload = {
       name:           newProduct.name,
       brand:          'AuraGlow',
@@ -95,20 +139,19 @@ export default function AdminProducts() {
       description:    newProduct.description || 'New AuraGlow product.',
       price:          parseFloat(newProduct.price) || 0,
       stock_quantity: stockVal,
-      is_vegan:       false,
+      is_vegan:       true,
       is_cruelty_free: true,
       is_active:      true,
-      images:         [],
+      images:         imagesToSave,
     };
 
     const { data, error: err } = await supabase
       .from('products')
       .insert([payload])
-      .select('id, name, brand, category, price, stock_quantity')
+      .select('id, name, brand, category, price, stock_quantity, images, description')
       .single();
 
     if (err) {
-      // Fallback: add locally to state so presentation never fails
       const fallbackItem = {
         id: `prod-${Date.now()}`,
         name: payload.name,
@@ -117,13 +160,16 @@ export default function AdminProducts() {
         price: payload.price,
         stock: payload.stock_quantity,
         status: getStatus(payload.stock_quantity),
+        image: imagesToSave[0] || '',
+        images: imagesToSave,
+        description: payload.description,
       };
       setProducts(prev => [fallbackItem, ...prev]);
     } else {
       setProducts(prev => [normalize(data), ...prev]);
     }
     setShowAddModal(false);
-    setNewProduct({ name: '', category: 'skincare', price: '', stock: '', description: '' });
+    setNewProduct({ name: '', category: 'skincare', price: '', stock: '', description: '', image: '', images: [] });
     setSaving(false);
   }
 
@@ -134,6 +180,8 @@ export default function AdminProducts() {
     setSaving(true);
     const updatedStock = parseInt(editProduct.stock) || 0;
     const updatedPrice = parseFloat(editProduct.price) || 0;
+    const primaryImg = (editProduct.image || (editProduct.images && editProduct.images[0]) || '').trim();
+    const imagesToSave = primaryImg ? [primaryImg, ...(editProduct.images || []).filter(u => u !== primaryImg)] : [];
 
     // Optimistic UI update
     setProducts(prev => prev.map(p => p.id === editProduct.id ? {
@@ -143,6 +191,9 @@ export default function AdminProducts() {
       price: updatedPrice,
       stock: updatedStock,
       status: getStatus(updatedStock),
+      image: primaryImg || p.image,
+      images: imagesToSave,
+      description: editProduct.description || p.description,
     } : p));
 
     // Attempt database update
@@ -154,6 +205,8 @@ export default function AdminProducts() {
           category: (editProduct.category || '').toLowerCase(),
           price: updatedPrice,
           stock_quantity: updatedStock,
+          images: imagesToSave,
+          description: editProduct.description || '',
         })
         .eq('id', editProduct.id);
     } catch (err) {
@@ -209,7 +262,7 @@ export default function AdminProducts() {
           </p>
           {error && <p style={{ color: 'var(--color-warning)', fontSize: 'var(--text-xs)', marginTop: '4px' }}>⚠ {error}</p>}
         </div>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowAddModal(true)}>+ Add Product</button>
+        <button className="btn btn-primary btn-sm" onClick={() => { setUploadError(''); setShowAddModal(true); }}>+ Add Product</button>
       </div>
 
       {/* Search & Filter */}
@@ -238,7 +291,7 @@ export default function AdminProducts() {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'rgba(255,255,255,0.02)' }}>
-                {['ID', 'Product Name', 'Category', 'Price', 'Stock', 'Status', 'Actions'].map((h, i) => (
+                {['ID', 'Product', 'Category', 'Price', 'Stock', 'Status', 'Actions'].map((h, i) => (
                   <th key={h} style={{ padding: 'var(--space-4)', color: 'var(--color-text-secondary)', fontWeight: '600', fontSize: 'var(--text-sm)', textAlign: i === 6 ? 'right' : 'left' }}>
                     {h}
                   </th>
@@ -253,13 +306,36 @@ export default function AdminProducts() {
                   <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
                     {String(p.id).slice(0, 8)}…
                   </td>
-                  <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-sm)', fontWeight: '500' }}>{p.name}</td>
+                  <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-sm)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                      <img
+                        src={p.image}
+                        alt={p.name}
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 8,
+                          objectFit: 'cover',
+                          border: '1px solid var(--color-border)',
+                          background: 'rgba(0,0,0,0.2)',
+                          flexShrink: 0
+                        }}
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=150&q=80';
+                        }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{p.name}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{p.brand}</div>
+                      </div>
+                    </div>
+                  </td>
                   <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>{p.category}</td>
-                  <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-sm)' }}>{formatPrice(p.price)}</td>
+                  <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>{formatPrice(p.price)}</td>
                   <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-sm)', fontWeight: p.stock < 20 ? '700' : '400' }}>{p.stock}</td>
                   <td style={{ padding: 'var(--space-4)' }}>{getStatusBadge(p.status)}</td>
                   <td style={{ padding: 'var(--space-4)', textAlign: 'right' }}>
-                    <button className="btn btn-ghost btn-sm" style={{ marginRight: 'var(--space-2)' }} onClick={() => setEditProduct({ ...p })}>Edit</button>
+                    <button className="btn btn-ghost btn-sm" style={{ marginRight: 'var(--space-2)' }} onClick={() => { setUploadError(''); setEditProduct({ ...p }); }}>Edit</button>
                     <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-error)' }} onClick={() => handleDelete(p.id)}>Delete</button>
                   </td>
                 </tr>
@@ -300,7 +376,7 @@ export default function AdminProducts() {
       {/* Add Product Modal */}
       {showAddModal && (
         <div className="fade-in" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(13,13,15,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-4)' }}>
-          <div className="card glass-strong scale-in" style={{ width: '100%', maxWidth: '520px', padding: 'var(--space-6)' }}>
+          <div className="card glass-strong scale-in" style={{ width: '100%', maxWidth: '540px', maxHeight: '90vh', overflowY: 'auto', padding: 'var(--space-6)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)' }}>Add New Product</h3>
               <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowAddModal(false)}>✕</button>
@@ -312,7 +388,13 @@ export default function AdminProducts() {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginBottom: '4px' }}>Description</label>
-                <input type="text" value={newProduct.description} onChange={e => setNewProduct({ ...newProduct, description: e.target.value })} placeholder="Brief product description" />
+                <textarea
+                  value={newProduct.description}
+                  onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
+                  placeholder="Brief product description and key benefits"
+                  rows={2}
+                  style={{ width: '100%', borderRadius: '8px', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', resize: 'vertical' }}
+                />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginBottom: '4px' }}>Category *</label>
@@ -333,9 +415,87 @@ export default function AdminProducts() {
                   <input type="number" value={newProduct.stock} onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })} required placeholder="100" min="0" />
                 </div>
               </div>
+
+              {/* Product Image Section */}
+              <div style={{ border: '1px dashed var(--color-border)', borderRadius: '12px', padding: 'var(--space-4)', background: 'rgba(255,255,255,0.02)' }}>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>
+                  Product Image
+                </label>
+                <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
+                  <div style={{
+                    width: '68px',
+                    height: '68px',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    border: '1px solid var(--color-border)',
+                    background: 'rgba(0,0,0,0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {newProduct.image ? (
+                      <img
+                        src={newProduct.image}
+                        alt="Preview"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: '24px', opacity: 0.5 }}>📷</span>
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label
+                      className={`btn btn-secondary btn-sm ${uploading ? 'disabled' : ''}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: uploading ? 'wait' : 'pointer',
+                        marginBottom: '6px'
+                      }}
+                    >
+                      <span>{uploading ? '⏳ Uploading...' : '📁 Upload Photo (ImgBB)'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        disabled={uploading}
+                        onChange={e => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleImageUpload(e.target.files[0], 'add');
+                          }
+                        }}
+                      />
+                    </label>
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                      Upload AI product photos, PNG, or JPG directly.
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 'var(--space-3)' }}>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>
+                    Or Paste Image URL:
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={newProduct.image || ''}
+                    onChange={e => setNewProduct({
+                      ...newProduct,
+                      image: e.target.value,
+                      images: [e.target.value, ...(newProduct.images || []).filter(u => u !== e.target.value)]
+                    })}
+                    style={{ fontSize: 'var(--text-xs)', padding: '6px 10px' }}
+                  />
+                </div>
+                {uploadError && <p style={{ color: 'var(--color-error)', fontSize: '11px', marginTop: '6px' }}>⚠ {uploadError}</p>}
+              </div>
+
               <div style={{ marginTop: 'var(--space-2)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
                 <button type="button" className="btn btn-ghost" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
+                <button type="submit" className="btn btn-primary" disabled={saving || uploading}>
                   {saving ? 'Saving…' : 'Save to Database'}
                 </button>
               </div>
@@ -347,9 +507,12 @@ export default function AdminProducts() {
       {/* Edit Product Modal */}
       {editProduct && (
         <div className="fade-in" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(13,13,15,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-4)' }}>
-          <div className="card glass-strong scale-in" style={{ width: '100%', maxWidth: '520px', padding: 'var(--space-6)' }}>
+          <div className="card glass-strong scale-in" style={{ width: '100%', maxWidth: '540px', maxHeight: '90vh', overflowY: 'auto', padding: 'var(--space-6)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
-              <h3 style={{ fontFamily: 'var(--font-heading)' }}>Edit Product</h3>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-heading)' }}>Edit Product</h3>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>ID: {editProduct.id}</span>
+              </div>
               <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setEditProduct(null)}>✕</button>
             </div>
             <form onSubmit={handleUpdateProduct} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -362,6 +525,18 @@ export default function AdminProducts() {
                   required
                 />
               </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginBottom: '4px' }}>Description</label>
+                <textarea
+                  value={editProduct.description || ''}
+                  onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
+                  placeholder="Product description and skin benefits"
+                  rows={2}
+                  style={{ width: '100%', borderRadius: '8px', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', resize: 'vertical' }}
+                />
+              </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginBottom: '4px' }}>Category *</label>
                 <select
@@ -374,6 +549,7 @@ export default function AdminProducts() {
                   <option value="tools">Tools</option>
                 </select>
               </div>
+
               <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginBottom: '4px' }}>Price (LKR) *</label>
@@ -396,9 +572,96 @@ export default function AdminProducts() {
                   />
                 </div>
               </div>
+
+              {/* Product Image Section */}
+              <div style={{ border: '1px dashed var(--color-border)', borderRadius: '12px', padding: 'var(--space-4)', background: 'rgba(255,255,200,0.02)' }}>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>
+                  Product Photo / Image
+                </label>
+                <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
+                  {/* Thumbnail Preview */}
+                  <div style={{
+                    width: '68px',
+                    height: '68px',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    border: '1px solid var(--color-border)',
+                    background: 'rgba(0,0,0,0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {editProduct.image ? (
+                      <img
+                        src={editProduct.image}
+                        alt={editProduct.name || 'Preview'}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: '24px', opacity: 0.5 }}>📷</span>
+                    )}
+                  </div>
+
+                  {/* Upload Button */}
+                  <div style={{ flex: 1 }}>
+                    <label
+                      className={`btn btn-secondary btn-sm ${uploading ? 'disabled' : ''}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: uploading ? 'wait' : 'pointer',
+                        marginBottom: '6px'
+                      }}
+                    >
+                      <span>{uploading ? '⏳ Uploading...' : '📁 Upload New Photo (ImgBB)'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        disabled={uploading}
+                        onChange={e => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleImageUpload(e.target.files[0], 'edit');
+                          }
+                        }}
+                      />
+                    </label>
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                      Select an AI image file from your computer to upload directly to ImgBB.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Direct URL input */}
+                <div style={{ marginTop: 'var(--space-3)' }}>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>
+                    Or Paste Image URL directly:
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://i.ibb.co/... or https://..."
+                    value={editProduct.image || ''}
+                    onChange={e => setEditProduct({
+                      ...editProduct,
+                      image: e.target.value,
+                      images: [e.target.value, ...(editProduct.images || []).filter(u => u !== e.target.value)]
+                    })}
+                    style={{ fontSize: 'var(--text-xs)', padding: '6px 10px' }}
+                  />
+                </div>
+
+                {uploadError && (
+                  <p style={{ color: 'var(--color-error)', fontSize: '11px', marginTop: '6px' }}>
+                    ⚠ {uploadError}
+                  </p>
+                )}
+              </div>
+
               <div style={{ marginTop: 'var(--space-2)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
                 <button type="button" className="btn btn-ghost" onClick={() => setEditProduct(null)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
+                <button type="submit" className="btn btn-primary" disabled={saving || uploading}>
                   {saving ? 'Updating…' : 'Update Product'}
                 </button>
               </div>
