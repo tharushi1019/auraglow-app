@@ -1,19 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
 import PersonalizedRoutineWidget from '@/components/reviews/PersonalizedRoutineWidget';
 import ProductCard from '@/components/catalog/ProductCard';
-import { products } from '@/data/mockData';
+import { products as fallbackProducts } from '@/data/mockData';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { askAiDermatologist } from '@/api/aiApi';
+import { getMatchingCosmetics, calculateSkinMatchScore } from '@/services/recommendationService';
+import { getProducts } from '@/services/productService';
 
 export default function RecommendationsPage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const { addToCart, requireAuth } = useCart();
   const { skinProfile, user } = useAuth();
+
+  const [catalogProducts, setCatalogProducts] = useState(fallbackProducts);
+
+  useEffect(() => {
+    let isMounted = true;
+    getProducts({ limit: 50 })
+      .then(res => {
+        if (isMounted && res && Array.isArray(res.products) && res.products.length > 0) {
+          setCatalogProducts(res.products);
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   // Read quiz completion or stored profile once safely
   const isQuizSuccess = searchParams.get('quiz') === 'success' || location.state?.fromQuiz;
@@ -81,6 +97,28 @@ export default function RecommendationsPage() {
       return p ? JSON.parse(p)?.allergens || [] : [];
     } catch { return []; }
   })();
+
+  const effectiveProfile = useMemo(() => {
+    try {
+      const p = localStorage.getItem('auraglow_skin_profile');
+      const parsed = p ? JSON.parse(p) : null;
+      return skinProfile || parsed || { skin_type: 'combination', skin_tone: 'medium', undertone: 'warm', concerns: [] };
+    } catch {
+      return skinProfile || { skin_type: 'combination', skin_tone: 'medium', undertone: 'warm', concerns: [] };
+    }
+  }, [skinProfile]);
+
+  const matchedCosmetics = useMemo(() => {
+    return getMatchingCosmetics(effectiveProfile);
+  }, [effectiveProfile]);
+
+  const topRecommendedProducts = useMemo(() => {
+    const scored = (catalogProducts || []).map(p => ({
+      ...p,
+      matchScore: calculateSkinMatchScore(p, activeSkinType, effectiveProfile),
+    }));
+    return scored.sort((a, b) => b.matchScore - a.matchScore).slice(0, 8);
+  }, [catalogProducts, activeSkinType, effectiveProfile]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -412,24 +450,125 @@ export default function RecommendationsPage() {
           </div>
         </section>
 
-        {/* 4. Top Recommended Formulas */}
+        {/* 4. Tone-Matched Complexion & Cosmetics Capsule */}
+        {matchedCosmetics && (
+          <section style={{
+            background: 'var(--color-bg-card)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-2xl)',
+            padding: 'var(--space-8)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+              <div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(232, 114, 150, 0.15)', border: '1px solid var(--color-accent-rose)', borderRadius: 'var(--radius-full)', padding: '3px 10px', fontSize: '11px', fontWeight: '700', color: 'var(--color-accent-rose)', textTransform: 'uppercase', marginBottom: 'var(--space-2)' }}>
+                  🎨 Complexion Diagnostic
+                </div>
+                <h3 style={{ fontSize: 'var(--text-2xl)', fontWeight: '800', fontFamily: 'var(--font-heading)', color: 'var(--color-text-primary)', margin: '0 0 var(--space-1) 0' }}>
+                  Precision Tone & Undertone Complexion Matches
+                </h3>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', margin: 0 }}>
+                  Calibrated for <strong>{(effectiveProfile?.skin_tone || 'Medium').toUpperCase()}</strong> skin with <strong>{(effectiveProfile?.undertone || 'Warm').toUpperCase()}</strong> undertones.
+                </p>
+              </div>
+              <Link to="/skin-quiz" style={{ color: 'var(--color-accent-rose)', textDecoration: 'none', fontSize: 'var(--text-xs)', fontWeight: '600' }}>
+                Retake Quiz ↺
+              </Link>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 'var(--space-5)' }}>
+              {Object.entries(matchedCosmetics).map(([key, item]) => {
+                if (!item || !item.product) return null;
+                const p = item.product;
+                const shade = item.shade;
+                return (
+                  <div
+                    key={key}
+                    className="card-hover-glow"
+                    style={{
+                      background: 'var(--color-bg-secondary)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-xl)',
+                      padding: 'var(--space-5)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: 'var(--space-3)',
+                    }}
+                  >
+                    <div>
+                      <div style={{ position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden', height: '160px', marginBottom: 'var(--space-3)' }}>
+                        <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {shade?.hex && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '8px',
+                            right: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'rgba(0,0,0,0.75)',
+                            backdropFilter: 'blur(6px)',
+                            padding: '3px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            fontSize: '11px',
+                            color: '#fff',
+                            fontWeight: '600',
+                          }}>
+                            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: shade.hex, border: '1.5px solid #fff', display: 'inline-block' }} />
+                            {shade.name}
+                          </div>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-accent-rose)', fontWeight: '700' }}>
+                        {p.category.toUpperCase()} • TONE MATCH
+                      </span>
+                      <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: '700', color: 'var(--color-text-primary)', margin: '4px 0 2px 0', lineHeight: 1.4 }}>
+                        {p.name}
+                      </h4>
+                      {shade && (
+                        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', margin: 0 }}>
+                          Matched Shade: <strong style={{ color: 'var(--color-text-primary)' }}>{shade.name}</strong>
+                        </p>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-2)' }}>
+                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: '800', color: 'var(--color-text-primary)' }}>
+                        LKR {p.price?.toLocaleString()}
+                      </span>
+                      <button
+                        onClick={() => handleAddToCart(p)}
+                        className="btn btn-primary"
+                        style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', borderRadius: 'var(--radius-full)', fontWeight: '700' }}
+                      >
+                        + Bag
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* 5. Top Recommended Formulas */}
         <section>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
             <div>
               <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: '800', fontFamily: 'var(--font-heading)', color: 'var(--color-text-primary)', margin: 0 }}>
-                Hero Formulas Matching Your Profile
+                Hero Clean Formulas Matching {activeSkinType} Skin
               </h2>
               <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', margin: '4px 0 0 0' }}>
-                Individually tailored products with 95%+ skin compatibility scores.
+                Ranked by AI skin compatibility score for your diagnostic concerns.
               </p>
             </div>
             <Link to="/products" style={{ color: 'var(--color-accent-rose)', textDecoration: 'none', fontSize: 'var(--text-sm)', fontWeight: '600' }}>
-              View Catalog →
+              View All {catalogProducts.length} Products →
             </Link>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 'var(--space-6)' }}>
-            {products.slice(0, 4).map(product => (
+            {topRecommendedProducts.map(product => (
               <ProductCard
                 key={product.id}
                 product={product}

@@ -16,6 +16,18 @@ const LEGACY_PRODUCT_ID_MAP = {
   'prod-006': 'b2000000-0000-0000-0000-000000000006',
   'prod-007': 'b2000000-0000-0000-0000-000000000007',
   'prod-008': 'b2000000-0000-0000-0000-000000000008',
+  'prod-009': 'b2000000-0000-0000-0000-000000000009',
+  'prod-010': 'b2000000-0000-0000-0000-000000000010',
+  'prod-011': 'b2000000-0000-0000-0000-000000000011',
+  'prod-012': 'b2000000-0000-0000-0000-000000000012',
+  'prod-013': 'b2000000-0000-0000-0000-000000000013',
+  'prod-014': 'b2000000-0000-0000-0000-000000000014',
+  'prod-015': 'b2000000-0000-0000-0000-000000000015',
+  'prod-016': 'b2000000-0000-0000-0000-000000000016',
+  'prod-017': 'b2000000-0000-0000-0000-000000000017',
+  'prod-018': 'b2000000-0000-0000-0000-000000000018',
+  'prod-019': 'b2000000-0000-0000-0000-000000000019',
+  'prod-020': 'b2000000-0000-0000-0000-000000000020',
 };
 
 function resolveProductId(id) {
@@ -253,7 +265,7 @@ exports.getProducts = async (req, res, next) => {
     let result = [];
     const { data: dbProducts, error: dbErr } = await supabase
       .from('products')
-      .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description, clean_beauty_tags, shades')
+      .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description, clean_beauty_tags, shades, skin_types_compatible, concerns_addressed')
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
@@ -269,12 +281,14 @@ exports.getProducts = async (req, res, next) => {
       price: parseFloat(p.price) || 0,
       oldPrice: null,
       stock: p.stock_quantity ?? 0,
-      rating: 4.7,
-      reviewCount: 100,
+      rating: 4.8,
+      reviewCount: 120,
       isVegan: p.is_vegan ?? false,
       isCrueltyFree: p.is_cruelty_free ?? true,
       tags: Array.isArray(p.clean_beauty_tags) ? p.clean_beauty_tags : [],
       shades: Array.isArray(p.shades) ? p.shades : [],
+      skinTypes: Array.isArray(p.skin_types_compatible) ? p.skin_types_compatible : [],
+      concerns: Array.isArray(p.concerns_addressed) ? p.concerns_addressed : [],
       badge: p.is_vegan ? '🌱 Vegan' : '🐰 Cruelty-Free',
       badgeClass: p.is_vegan ? 'badge-vegan' : 'badge-cruelty-free',
       description: p.description || '',
@@ -385,7 +399,7 @@ exports.getProductById = async (req, res, next) => {
     if (isUuid) {
       const { data: dbProduct, error: dbError } = await supabase
         .from('products')
-        .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description, clean_beauty_tags, shades')
+        .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description, clean_beauty_tags, shades, skin_types_compatible, concerns_addressed')
         .eq('id', canonicalId)
         .maybeSingle();
       if (dbError) {
@@ -402,10 +416,14 @@ exports.getProductById = async (req, res, next) => {
             category: (dbProduct.category || 'skincare').toLowerCase(),
             price: parseFloat(dbProduct.price) || 0,
             stock: dbProduct.stock_quantity ?? 0,
+            rating: 4.8,
+            reviewCount: 120,
             isVegan: dbProduct.is_vegan ?? false,
             isCrueltyFree: dbProduct.is_cruelty_free ?? true,
             tags: Array.isArray(dbProduct.clean_beauty_tags) ? dbProduct.clean_beauty_tags : [],
             shades: Array.isArray(dbProduct.shades) ? dbProduct.shades : [],
+            skinTypes: Array.isArray(dbProduct.skin_types_compatible) ? dbProduct.skin_types_compatible : [],
+            concerns: Array.isArray(dbProduct.concerns_addressed) ? dbProduct.concerns_addressed : [],
             description: dbProduct.description || '',
             ingredients: [],
             image: (Array.isArray(dbProduct.images) && dbProduct.images.length > 0)
