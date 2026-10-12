@@ -227,6 +227,198 @@ INSERT INTO products (
     '["vegan","cruelty-free","fragrance-free","paraben-free"]',
     '[]',
     TRUE, TRUE, TRUE
+  ),
+
+  -- prod-009: Luminous Silk Serum Foundation
+  (
+    'b2000000-0000-0000-0000-000000000009',
+    'Luminous Silk Serum Foundation',
+    'AuraGlow',
+    'makeup',
+    'A weightless, breathable skincare-infused foundation with Hyaluronic Acid and Niacinamide. Delivers medium, buildable luminous coverage that feels like bare skin.',
+    9500.00, 65,
+    '["https://images.unsplash.com/photo-1631729371254-42c2892f0e6e?auto=format&fit=crop&w=800&q=80","https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80"]',
+    '["dry","oily","combination","sensitive","normal"]',
+    '["dullness","uneven-texture"]',
+    '["vegan","cruelty-free","fragrance-free","paraben-free","silicone-free"]',
+    '[{"name":"01 Fair Warm (Porcelain)","hex":"#F9E5D9","stock":8,"tone":"light","undertone":"warm"},{"name":"02 Fair Cool (Alabaster)","hex":"#F6DDD2","stock":8,"tone":"light","undertone":"cool"},{"name":"03 Light Neutral (Ivory)","hex":"#EED0BE","stock":9,"tone":"light","undertone":"neutral"},{"name":"04 Medium Warm (Sand)","hex":"#E5BF9E","stock":10,"tone":"medium","undertone":"warm"},{"name":"05 Medium Neutral (Honey)","hex":"#D6A87C","stock":10,"tone":"medium","undertone":"neutral"},{"name":"06 Tan Warm (Caramel)","hex":"#C28C58","stock":7,"tone":"tan","undertone":"warm"},{"name":"07 Dark Neutral (Toffee)","hex":"#9B613A","stock":7,"tone":"dark","undertone":"neutral"},{"name":"08 Deep Cool (Espresso)","hex":"#5E3823","stock":6,"tone":"deep","undertone":"cool"}]',
+    TRUE, TRUE, TRUE
+  ),
+
+  -- prod-010: Niacinamide 10% + Zinc Pore Minimizing Serum
+  (
+    'b2000000-0000-0000-0000-000000000010',
+    'Niacinamide 10% + Zinc Pore Minimizing Serum',
+    'AuraGlow',
+    'skincare',
+    'Clinical-strength clarifying treatment powered by 10% high-purity Niacinamide and 1% Zinc PCA to balance excess sebum and refine pore texture.',
+    4900.00, 80,
+    '["https://images.unsplash.com/photo-1608248597359-5984365b2d2f?auto=format&fit=crop&w=800&q=80","https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=800&q=80"]',
+    '["oily","combination","normal"]',
+    '["acne","dullness"]',
+    '["vegan","cruelty-free","fragrance-free","oil-free","sulfate-free","paraben-free"]',
+    '[]',
+    TRUE, TRUE, TRUE
+  ),
+
+  -- prod-011: Centella Cica Barrier Calming Cream
+  (
+    'b2000000-0000-0000-0000-000000000011',
+    'Centella Cica Barrier Calming Cream',
+    'AuraGlow',
+    'skincare',
+    'An emergency rescue moisturizer formulated with 70% Centella Asiatica leaf water and Madecassoside to soothe burning sensations and severe redness.',
+    6400.00, 45,
+    '["https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80","https://images.unsplash.com/photo-1599305090598-fe179d501227?auto=format&fit=crop&w=800&q=80"]',
+    '["sensitive","dry","combination"]',
+    '["redness","dehydration"]',
+    '["vegan","cruelty-free","fragrance-free","hypoallergenic","paraben-free"]',
+    '[]',
+    TRUE, TRUE, TRUE
+  ),
+
+  -- prod-012: Bakuchiol & Peptide Youth Firming Elixir
+  (
+    'b2000000-0000-0000-0000-000000000012',
+    'Bakuchiol & Peptide Youth Firming Elixir',
+    'AuraGlow',
+    'skincare',
+    'Plant-based bio-retinol alternative with 2% Bakuchiol seed extract and firming Signal Peptides to smooth wrinkles without sensitivity or peeling.',
+    10500.00, 35,
+    '["https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?auto=format&fit=crop&w=800&q=80","https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=800&q=80"]',
+    '["dry","combination","normal","sensitive"]',
+    '["aging","dullness"]',
+    '["vegan","cruelty-free","clean-retinol","paraben-free","sulfate-free"]',
+    '[]',
+    TRUE, TRUE, TRUE
+  ),
+
+  -- prod-013: BHA 2% Salicylic Clarifying Exfoliant Toner
+  (
+    'b2000000-0000-0000-0000-000000000013',
+    'BHA 2% Salicylic Clarifying Exfoliant Toner',
+    'AuraGlow',
+    'skincare',
+    'Gentle leave-on liquid exfoliant with 2% Salicylic Acid and Willow Bark to unglue dead cells, dissolve blackheads, and prevent cystic blemishes.',
+    4200.00, 70,
+    '["https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=800&q=80","https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=800&q=80"]',
+    '["oily","combination"]',
+    '["acne"]',
+    '["vegan","cruelty-free","alcohol-free","fragrance-free","paraben-free"]',
+    '[]',
+    TRUE, TRUE, TRUE
+  ),
+
+  -- prod-014: Alpha Arbutin 2% Dark Spot Corrector
+  (
+    'b2000000-0000-0000-0000-000000000014',
+    'Alpha Arbutin 2% Dark Spot Corrector',
+    'AuraGlow',
+    'skincare',
+    'Targeted brightening treatment with 2% purified Alpha Arbutin and Licorice Root to fade stubborn post-acne pigmentation and sun spots.',
+    6800.00, 50,
+    '["https://images.unsplash.com/photo-1617897903246-719242758050?auto=format&fit=crop&w=800&q=80","https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=800&q=80"]',
+    '["dry","oily","combination","normal"]',
+    '["dark-spots","dullness"]',
+    '["vegan","cruelty-free","hydroquinone-free","fragrance-free","paraben-free"]',
+    '[]',
+    TRUE, TRUE, TRUE
+  ),
+
+  -- prod-015: Ceramide Multi-Depth Barrier Moisture Balm
+  (
+    'b2000000-0000-0000-0000-000000000015',
+    'Ceramide Multi-Depth Barrier Moisture Balm',
+    'AuraGlow',
+    'skincare',
+    'Ultra-nourishing lipid cushion with 5 bio-identical ceramides, cholesterol, and oat beta-glucan to shield severely dry, damaged skin.',
+    7900.00, 40,
+    '["https://images.unsplash.com/photo-1599305090598-fe179d501227?auto=format&fit=crop&w=800&q=80","https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80"]',
+    '["dry","sensitive","normal"]',
+    '["dryness","dehydration","redness"]',
+    '["vegan","cruelty-free","fragrance-free","steroid-free","paraben-free"]',
+    '[]',
+    TRUE, TRUE, TRUE
+  ),
+
+  -- prod-016: Petal Dew Lip & Cheek Cream Tint
+  (
+    'b2000000-0000-0000-0000-000000000016',
+    'Petal Dew Lip & Cheek Cream Tint',
+    'AuraGlow',
+    'makeup',
+    'Multi-use dewy cream blush and lip tint enriched with Camellia seed oil and Vitamin E for a radiant, lit-from-within flush.',
+    3800.00, 55,
+    '["https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=800&q=80","https://images.unsplash.com/photo-1586495777744-4413f21062fa?auto=format&fit=crop&w=800&q=80"]',
+    '["dry","oily","combination","sensitive","normal"]',
+    '["dullness"]',
+    '["vegan","cruelty-free","carmine-free","paraben-free","silicone-free"]',
+    '[{"name":"Peony Glow (Soft Pink)","hex":"#E89EB0","stock":15,"tone":"light","undertone":"cool"},{"name":"Amber Sunrise (Terracotta)","hex":"#CF6D4E","stock":15,"tone":"medium","undertone":"warm"},{"name":"Desert Rose (Neutral Mauve)","hex":"#B8727C","stock":13,"tone":"medium","undertone":"neutral"},{"name":"Wild Berry (Deep Berry)","hex":"#87344D","stock":12,"tone":"deep","undertone":"cool"}]',
+    TRUE, TRUE, TRUE
+  ),
+
+  -- prod-017: Radiant Glow Skin Tint SPF 30
+  (
+    'b2000000-0000-0000-0000-000000000017',
+    'Radiant Glow Skin Tint SPF 30',
+    'AuraGlow',
+    'makeup',
+    '3-in-1 hydrating skin tint, daily mineral sunscreen, and antioxidant serum. Sheer, dewy coverage with non-nano Zinc Oxide protection.',
+    7600.00, 60,
+    '["https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=800&q=80","https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80"]',
+    '["dry","combination","sensitive","normal"]',
+    '["dehydration","dullness"]',
+    '["vegan","cruelty-free","chemical-uv-free","reef-safe","fragrance-free"]',
+    '[{"name":"Fair 01 (Warm)","hex":"#F7E7DC","stock":12,"tone":"light","undertone":"warm"},{"name":"Light 02 (Neutral)","hex":"#ECD4C2","stock":12,"tone":"light","undertone":"neutral"},{"name":"Medium 03 (Golden)","hex":"#DEB997","stock":14,"tone":"medium","undertone":"warm"},{"name":"Tan 04 (Warm Amber)","hex":"#BE8C5E","stock":11,"tone":"tan","undertone":"warm"},{"name":"Deep 05 (Rich Bronze)","hex":"#7C4927","stock":11,"tone":"deep","undertone":"neutral"}]',
+    TRUE, TRUE, TRUE
+  ),
+
+  -- prod-018: Mineral Dew Creaseless Concealer
+  (
+    'b2000000-0000-0000-0000-000000000018',
+    'Mineral Dew Creaseless Concealer',
+    'AuraGlow',
+    'makeup',
+    'Ultra-blendable, creaseless fluid concealer with Caffeine and Squalane to de-puff dark circles and disguise blemishes seamlessly.',
+    4600.00, 75,
+    '["https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?auto=format&fit=crop&w=800&q=80","https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80"]',
+    '["dry","oily","combination","sensitive","normal"]',
+    '["dark-spots","dullness"]',
+    '["vegan","cruelty-free","talc-free","silicone-free","paraben-free"]',
+    '[{"name":"C1 Fair Cool","hex":"#F9E6DB","stock":12,"tone":"light","undertone":"cool"},{"name":"W1 Light Warm","hex":"#F0D4BF","stock":13,"tone":"light","undertone":"warm"},{"name":"N2 Medium Neutral","hex":"#DEBA9A","stock":15,"tone":"medium","undertone":"neutral"},{"name":"W2 Medium Golden","hex":"#D2A478","stock":13,"tone":"medium","undertone":"warm"},{"name":"W3 Tan Honey","hex":"#B57C4F","stock":11,"tone":"tan","undertone":"warm"},{"name":"N3 Deep Cocoa","hex":"#633B22","stock":11,"tone":"deep","undertone":"neutral"}]',
+    TRUE, TRUE, TRUE
+  ),
+
+  -- prod-019: Oat Milk Soothing Barrier Cleanser
+  (
+    'b2000000-0000-0000-0000-000000000019',
+    'Oat Milk Soothing Barrier Cleanser',
+    'AuraGlow',
+    'skincare',
+    'Comforting non-foaming cleansing milk with Colloidal Oatmeal and Sweet Almond Oil to dissolve impurities while preserving sensitive barriers.',
+    3600.00, 65,
+    '["https://images.unsplash.com/photo-1556228578-dd539282b964?auto=format&fit=crop&w=800&q=80","https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=800&q=80"]',
+    '["sensitive","dry","normal"]',
+    '["redness","dehydration","dryness"]',
+    '["vegan","cruelty-free","soap-free","sulfate-free","fragrance-free","hypoallergenic"]',
+    '[]',
+    TRUE, TRUE, TRUE
+  ),
+
+  -- prod-020: Peptide Glaze Hydrating Lip Oil
+  (
+    'b2000000-0000-0000-0000-000000000020',
+    'Peptide Glaze Hydrating Lip Oil',
+    'AuraGlow',
+    'makeup',
+    'Cushiony, non-sticky lip oil with Maxi-Lip peptides, Jojoba oil, and Vitamin C. Plumps the look of lips with mirror-like shine and lasting moisture.',
+    3400.00, 80,
+    '["https://images.unsplash.com/photo-1586495777744-4413f21062fa?auto=format&fit=crop&w=800&q=80","https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=800&q=80"]',
+    '["dry","oily","combination","sensitive","normal"]',
+    '["dehydration"]',
+    '["vegan","cruelty-free","mineral-oil-free","gluten-free","paraben-free"]',
+    '[{"name":"Crystal Clear (High Gloss)","hex":"#FFFFFF","stock":20,"tone":"all","undertone":"neutral"},{"name":"Rose Quartz (Sheer Pink)","hex":"#F2A9B8","stock":20,"tone":"light","undertone":"cool"},{"name":"Honey Peach (Warm Nude)","hex":"#EAA27D","stock":20,"tone":"medium","undertone":"warm"},{"name":"Blackberry Glaze (Sheer Plum)","hex":"#773549","stock":20,"tone":"deep","undertone":"cool"}]',
+    TRUE, TRUE, TRUE
   )
 
 ON CONFLICT (id) DO NOTHING;

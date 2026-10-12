@@ -27,14 +27,26 @@ if (GEMINI_API_KEY && GEMINI_API_KEY.trim().length > 10) {
  */
 const CATALOG_CONTEXT = `
 Available AuraGlow Products in store:
-1. "Radiant Glow Daily Serum" (prod-001) - 15% Vitamin C + Hyaluronic Acid + Ferulic Acid. Price: Rs. 8,900. Targets: Dullness, dark spots, uneven texture. Best for: All skin types.
+1. "Radiant Glow Daily Serum" (prod-001) - 15% Vitamin C + Hyaluronic Acid + Ferulic Acid. Price: Rs. 5,800. Targets: Dullness, dark spots, uneven texture. Best for: All skin types.
 2. "Petal Hydra Cloud Cream" (prod-003) - Multi-molecular Hyaluronic Acid + Peptides + Squalane. Price: Rs. 7,200. Targets: Dehydration, barrier repair, fine lines. Best for: Dry, sensitive, combination.
-3. "Botanical Cleansing Melt" (prod-005) - Green tea polyphenols + Camellia oil + Aloe vera. Price: Rs. 4,800. Targets: Cleansing impurities without stripping lipid barrier. Best for: All skin types.
+3. "Botanical Cleansing Melt" (prod-005) - Green tea polyphenols + Camellia oil + Aloe vera. Price: Rs. 3,200. Targets: Cleansing impurities without stripping lipid barrier. Best for: Oily, combination, acne.
 4. "Invisible Shield SPF 50+ Fluid" (prod-008) - Broad-spectrum UVA/UVB + Niacinamide + Zinc. Price: Rs. 5,500. Targets: Sun protection, pollution, redness. Best for: All skin types, zero white cast.
-5. "Velvet Matte Moisture Lipstick" (prod-002) - Shea butter + Vitamin E. Price: Rs. 4,500.
-6. "Rose Gold Illuminating Palette" (prod-004) - Mineral glow pigments. Price: Rs. 11,000.
-7. "Midnight Bloom Eau de Parfum" (prod-006) - Jasmine, dark vanilla & amber. Price: Rs. 15,500.
-8. "Precision Luxe Foundation Brush" (prod-007) - Ultra-soft cruelty-free vegan bristles. Price: Rs. 3,800.
+5. "Velvet Matte Moisture Lipstick" (prod-002) - Shea butter + Vitamin E. Price: Rs. 4,500. 3 classic velvety shades.
+6. "Rose Gold Illuminating Palette" (prod-004) - Mineral glow pigments. Price: Rs. 11,000. 12 warm rose-gold shades.
+7. "Midnight Bloom Eau de Parfum" (prod-006) - Jasmine, dark vanilla & sandalwood. Price: Rs. 15,500.
+8. "Precision Luxe Foundation Brush" (prod-007) - Ultra-soft cruelty-free vegan bristles. Price: Rs. 6,800.
+9. "Luminous Silk Serum Foundation" (prod-009) - Hyaluronic Acid + Niacinamide breathable medium coverage foundation. Price: Rs. 9,500. 8 inclusive shades (Fair Warm/Cool to Deep Cool).
+10. "Niacinamide 10% + Zinc Pore Minimizing Serum" (prod-010) - 10% Niacinamide + 1% Zinc PCA. Price: Rs. 4,900. Targets: Sebum control, enlarged pores, acne blemishes. Best for: Oily, combination.
+11. "Centella Cica Barrier Calming Cream" (prod-011) - 70% Centella Asiatica + Madecassoside. Price: Rs. 6,400. Targets: Severe redness, facial flushing, reactive inflammation. Best for: Sensitive, reactive skin.
+12. "Bakuchiol & Peptide Youth Firming Elixir" (prod-012) - 2% Plant-based bio-retinol + firming signal peptides. Price: Rs. 10,500. Targets: Wrinkles, loss of elasticity, photo-aging. Non-irritating. Best for: Aging, sensitive, dry, normal.
+13. "BHA 2% Salicylic Clarifying Exfoliant Toner" (prod-013) - 2% Salicylic Acid + Green tea. Price: Rs. 4,200. Targets: Blackheads, cystic acne, clogged pores. Best for: Oily, acne-prone.
+14. "Alpha Arbutin 2% Dark Spot Corrector" (prod-014) - 2% Purified Alpha Arbutin + Licorice root. Price: Rs. 6,800. Targets: Post-acne marks, melasma, hyperpigmentation. Best for: Dark spots, uneven tone.
+15. "Ceramide Multi-Depth Barrier Moisture Balm" (prod-015) - 5 Bio-identical ceramides + Oat Beta-Glucan. Price: Rs. 7,900. Targets: Severe dryness, flakiness, eczema-prone barrier compromise. Best for: Dry, sensitive.
+16. "Petal Dew Lip & Cheek Cream Tint" (prod-016) - Camellia seed oil + Vitamin E. Price: Rs. 3,800. 4 shades (Peony, Amber, Desert Rose, Wild Berry).
+17. "Radiant Glow Skin Tint SPF 30" (prod-017) - Non-nano Zinc mineral skin tint. Price: Rs. 7,600. 5 shades (Fair to Deep). Sheer dewy coverage.
+18. "Mineral Dew Creaseless Concealer" (prod-018) - Caffeine + Squalane de-puffing clean concealer. Price: Rs. 4,600. 6 shades (Fair Cool to Deep Cocoa).
+19. "Oat Milk Soothing Barrier Cleanser" (prod-019) - Colloidal oatmeal + Sweet almond oil creamy cleanser. Price: Rs. 3,600. Non-stripping, hypoallergenic wash for dry & sensitive skin.
+20. "Peptide Glaze Hydrating Lip Oil" (prod-020) - Maxi-Lip peptides + Jojoba oil mirror gloss. Price: Rs. 3,400. 4 sheer juicy shades.
 `;
 
 /**
@@ -220,68 +232,105 @@ function generateFallbackRoutine(skinType, concerns, allergens) {
     normal: 'Optimized antioxidant defense designed to safeguard pristine barrier function and impart an all-day lit-from-within luminosity.',
   };
 
+  const routinesByType = {
+    oily: {
+      am: [
+        { step: 1, stepName: 'Purifying Green Tea Foam', productId: 'prod-005', activeActives: 'Green Tea EGCG & Camellia', instruction: 'Lather with lukewarm water for 60 seconds; rinse thoroughly.', benefit: 'Clears overnight sebum while keeping acid mantle intact.' },
+        { step: 2, stepName: 'Pore Clarifying Treatment', productId: 'prod-010', activeActives: '10% Niacinamide & 1% Zinc PCA', instruction: 'Press 3 drops into T-zone and areas prone to enlarged pores.', benefit: 'Regulates oil output and tightens pore appearance.' },
+        { step: 3, stepName: 'Weightless Matte UV Shield', productId: 'prod-008', activeActives: 'Zinc Oxide SPF 50+ Fluid', instruction: 'Apply evenly as final morning step.', benefit: 'Broad-spectrum protection without shine or grease.' }
+      ],
+      pm: [
+        { step: 1, stepName: 'Deep Decongesting Cleanse', productId: 'prod-005', activeActives: 'Green Tea & Aloe Vera', instruction: 'Wash away pollutants, excess sebum, and makeup.', benefit: 'Leaves skin clean and decongested.' },
+        { step: 2, stepName: 'BHA 2% Pore Decongestion', productId: 'prod-013', activeActives: '2% Salicylic Acid & Willow Bark', instruction: 'Gently sweep across face with cotton pad or palms; do not rinse.', benefit: 'Penetrates pore linings to dissolve blackheads and cystic blockages.' },
+        { step: 3, stepName: 'Sebum-Regulating Repair', productId: 'prod-010', activeActives: '10% Niacinamide & Zinc', instruction: 'Apply smoothly before sleep.', benefit: 'Supports nighttime blemish prevention.' }
+      ],
+      actives: [
+        { name: 'Niacinamide 10%', function: 'Regulates sebaceous lipid synthesis and prevents pore stretching.' },
+        { name: 'Salicylic Acid 2%', function: 'Lipid-soluble beta-hydroxy acid that clears congested follicules.' },
+        { name: 'Zinc PCA 1%', function: 'Suppresses inflammatory acne lesions and curbs sebum oxidation.' }
+      ]
+    },
+    dry: {
+      am: [
+        { step: 1, stepName: 'Oat Milk Cushion Cleanse', productId: 'prod-019', activeActives: 'Colloidal Oatmeal & Almond Oil', instruction: 'Massage onto damp skin; rinse with cool water.', benefit: 'Preserves delicate lipid barrier without stripping moisture.' },
+        { step: 2, stepName: 'Bio-Lipid Antioxidant Serum', productId: 'prod-001', activeActives: 'Vitamin C & Rose Hip Oil', instruction: 'Press 4 drops gently into face and neck.', benefit: 'Floods thirsty cells with essential fatty acids and antioxidants.' },
+        { step: 3, stepName: 'Ceramide Barrier Recovery Balm', productId: 'prod-015', activeActives: '5 Bio-Identical Ceramides', instruction: 'Warm a pea-sized amount between fingers and smooth over face.', benefit: 'Locks in 72-hour moisture and repairs flaky skin.' },
+        { step: 4, stepName: 'Invisible Shield SPF 50', productId: 'prod-008', activeActives: 'Zinc Oxide & Hyaluronic Acid', instruction: 'Apply generously to face and neck.', benefit: 'Prevents photo-damage and trans-epidermal moisture loss.' }
+      ],
+      pm: [
+        { step: 1, stepName: 'Comfort Cream Melt Cleanse', productId: 'prod-019', activeActives: 'Colloidal Oatmeal', instruction: 'Dissolve makeup and impurities softly.', benefit: 'Zero dryness or redness.' },
+        { step: 2, stepName: 'Bakuchiol Firming Elixir', productId: 'prod-012', activeActives: '2% Bakuchiol & Signal Peptides', instruction: 'Smooth over face and décolleté.', benefit: 'Plumps fine dehydration lines without retinol dryness.' },
+        { step: 3, stepName: 'Ceramide Multi-Depth Balm', productId: 'prod-015', activeActives: 'Ceramides & Oat Beta-Glucan', instruction: 'Apply generous layer before sleep.', benefit: 'Intense overnight lipid barrier cocoon.' }
+      ],
+      actives: [
+        { name: '5 Bio-Identical Ceramides', function: 'Reconstructs damaged lipid bilayer and seals cellular hydration.' },
+        { name: 'Colloidal Oatmeal', function: 'Relieves micro-inflammation and reinforces moisture barrier.' },
+        { name: 'Bakuchiol 2%', function: 'Stimulates collagen without drying out parched skin.' }
+      ]
+    },
+    sensitive: {
+      am: [
+        { step: 1, stepName: 'Ultra-Gentle Oat Cleanse', productId: 'prod-019', activeActives: 'Colloidal Oatmeal & Bisabolol', instruction: 'Gently glide over skin with minimal friction.', benefit: 'Calms reactive sensitivity upon contact.' },
+        { step: 2, stepName: 'Centella Cica Relief Cream', productId: 'prod-011', activeActives: '70% Centella Asiatica & Madecassoside', instruction: 'Pat evenly over face, focusing on flushed zones.', benefit: 'Instant biological quenching of erythema and burning.' },
+        { step: 3, stepName: 'Mineral UV Shield SPF 50', productId: 'prod-008', activeActives: 'Non-Nano Zinc Oxide', instruction: 'Smooth gently over face and ears.', benefit: 'Physical UV reflection completely free from chemical irritants.' }
+      ],
+      pm: [
+        { step: 1, stepName: 'Hypoallergenic Oat Cleanse', productId: 'prod-019', activeActives: 'Colloidal Oatmeal', instruction: 'Rinse with tepid water; pat dry with clean microfiber.', benefit: 'Zero irritation or tightness.' },
+        { step: 2, stepName: 'Centella Cica Overnight Relief', productId: 'prod-011', activeActives: 'Madecassoside & Panthenol B5', instruction: 'Apply a soothing layer before bed.', benefit: 'Overnight neuro-sensory recovery.' }
+      ],
+      actives: [
+        { name: 'Centella Asiatica 70%', function: 'Inhibits inflammatory cytokines and fortifies weakened capillaries.' },
+        { name: 'Madecassoside', function: 'Accelerates cellular tissue regeneration and micro-damage repair.' },
+        { name: 'Non-Nano Zinc Oxide', function: 'Physical barrier that protects sensitive skin from environmental irritation.' }
+      ]
+    },
+    combination: {
+      am: [
+        { step: 1, stepName: 'Balancing Botanical Cleanse', productId: 'prod-005', activeActives: 'Green Tea & Camellia', instruction: 'Massage gently for 60 seconds.', benefit: 'Cleanses T-zone while keeping cheeks comfortable.' },
+        { step: 2, stepName: 'Radiant Cellular Serum', productId: 'prod-001', activeActives: 'Vitamin C & Niacinamide', instruction: 'Apply 3-4 drops evenly across face.', benefit: 'Brightens and unified skin texture.' },
+        { step: 3, stepName: 'Petal Hydra Cloud Cream', productId: 'prod-003', activeActives: 'Hyaluronic Acid & Peptides', instruction: 'Smooth a light layer over cheeks and neck.', benefit: 'Weightless hydration that never feels greasy.' },
+        { step: 4, stepName: 'Invisible Shield SPF 50', productId: 'prod-008', activeActives: 'Zinc Oxide SPF 50+', instruction: 'Apply 15 minutes before sun exposure.', benefit: 'Non-comedogenic broad-spectrum daily shield.' }
+      ],
+      pm: [
+        { step: 1, stepName: 'Botanical Melt Cleanse', productId: 'prod-005', activeActives: 'Green Tea & Camellia', instruction: 'Rinse clean with lukewarm water.', benefit: 'Removes daily grime without stripping cheeks.' },
+        { step: 2, stepName: 'Niacinamide T-Zone Balancing', productId: 'prod-010', activeActives: '10% Niacinamide & Zinc', instruction: 'Apply to forehead, nose, and chin.', benefit: 'Curb nighttime excess shine.' },
+        { step: 3, stepName: 'Petal Hydra Cloud Cream', productId: 'prod-003', activeActives: 'Hyaluronic Acid & Squalane', instruction: 'Smooth over entire face.', benefit: 'Delivers balanced multi-depth moisture.' }
+      ],
+      actives: [
+        { name: 'Niacinamide', function: 'Balances sebum in oily zones while preserving hydration elsewhere.' },
+        { name: 'Multi-Depth Hyaluronic Acid', function: 'Provides featherlight plumping hydration.' },
+        { name: 'Green Tea Extract', function: 'Antioxidant protection and oil balance.' }
+      ]
+    },
+    normal: {
+      am: [
+        { step: 1, stepName: 'Gentle Botanical Cleanse', productId: 'prod-005', activeActives: 'Green Tea & Aloe Vera', instruction: 'Emulsify with water and rinse.', benefit: 'Fresh morning start.' },
+        { step: 2, stepName: 'Radiant Glow Daily Serum', productId: 'prod-001', activeActives: '15% Stabilized Vitamin C', instruction: 'Press 4 drops into skin.', benefit: 'Antioxidant glass-skin glow.' },
+        { step: 3, stepName: 'Petal Hydra Cream', productId: 'prod-003', activeActives: 'Hyaluronic Acid & Peptides', instruction: 'Smooth over face and neck.', benefit: 'All-day bouncy suppleness.' },
+        { step: 4, stepName: 'Invisible Shield SPF 50', productId: 'prod-008', activeActives: 'Zinc Oxide & Niacinamide', instruction: 'Apply as final daytime step.', benefit: 'Complete environmental defense.' }
+      ],
+      pm: [
+        { step: 1, stepName: 'Botanical Cleanse', productId: 'prod-005', activeActives: 'Camellia Oil', instruction: 'Wash away daily pollutants.', benefit: 'Cleanses without disruption.' },
+        { step: 2, stepName: 'Bakuchiol Youth Firming Elixir', productId: 'prod-012', activeActives: '2% Bakuchiol & Peptides', instruction: 'Smooth over clean skin.', benefit: 'Overnight pro-collagen renewal.' },
+        { step: 3, stepName: 'Petal Hydra Cream', productId: 'prod-003', activeActives: 'Peptides & Squalane', instruction: 'Lock in night nourishment.', benefit: 'Wake up to lit-from-within luminosity.' }
+      ],
+      actives: [
+        { name: 'Stabilized Vitamin C 15%', function: 'Protects from free radicals and promotes even radiance.' },
+        { name: 'Bakuchiol 2%', function: 'Stimulates cellular firmness and elasticity.' },
+        { name: 'Botanical Squalane', function: 'Weightless lipid nourishment for healthy glow.' }
+      ]
+    }
+  };
+
+  const selected = routinesByType[normType] || routinesByType.combination;
+
   return {
     title: titleMap[normType] || titleMap.combination,
     clinicalRationale: rationaleMap[normType] || rationaleMap.combination,
-    matchScore: 97,
-    amRoutine: [
-      {
-        step: 1,
-        stepName: 'Gentle Botanical Cleanse',
-        productId: 'prod-005',
-        activeActives: 'Green Tea Polyphenols & Camellia',
-        instruction: 'Emulsify with lukewarm water for 60 seconds; rinse gently without rubbing.',
-        benefit: 'Clears overnight cellular debris while preserving vital acid mantle.'
-      },
-      {
-        step: 2,
-        stepName: 'Active Antioxidant Treatment',
-        productId: 'prod-001',
-        activeActives: '15% Stabilized Vitamin C & Ferulic',
-        instruction: 'Dispense 4-5 drops directly onto dry skin; press with palms until absorbed.',
-        benefit: 'Neutralizes free radical formation and stimulates pro-collagen synthesis.'
-      },
-      {
-        step: 3,
-        stepName: 'Multi-Depth Cloud Hydration',
-        productId: 'prod-003',
-        activeActives: 'Multi-Weight Hyaluronic Acid & Squalane',
-        instruction: 'Smooth a pea-sized amount evenly over face and neck in upward strokes.',
-        benefit: 'Delivers 72-hour moisture lock and strengthens lipid barrier.'
-      },
-      {
-        step: 4,
-        stepName: 'Broad-Spectrum Environmental Shield',
-        productId: 'prod-008',
-        activeActives: 'Zinc Oxide & Niacinamide SPF 50+',
-        instruction: 'Apply generously 15 minutes before UV or blue-light exposure.',
-        benefit: 'Complete photo-aging defense with zero white cast and pore clogging.'
-      }
-    ],
-    pmRoutine: [
-      {
-        step: 1,
-        stepName: 'Botanical Lipid Melt Cleanse',
-        productId: 'prod-005',
-        activeActives: 'Camellia Oil & Aloe Vera',
-        instruction: 'Massage onto dry skin to dissolve SPF and particulate pollution; emulsify with warm water.',
-        benefit: 'Deep-pore decongestion without lipid barrier disruption.'
-      },
-      {
-        step: 2,
-        stepName: 'Overnight Cellular Barrier Recovery',
-        productId: 'prod-003',
-        activeActives: 'Peptides & Bio-Identical Ceramides',
-        instruction: 'Warm between fingertips and gently press into skin before bedtime.',
-        benefit: 'Accelerates cellular renewal and locks in deep overnight hydration.'
-      }
-    ],
-    keyActives: [
-      { name: 'Multi-Weight Hyaluronic Acid', function: 'Binds 1,000x its weight in water across 4 epidermal layers.', synergyNote: 'Enhances absorption of subsequent peptide molecules.' },
-      { name: 'Stabilized Vitamin C 15%', function: 'Inhibits tyrosinase to prevent pigmentation while neutralizing UV stress.', synergyNote: 'Works synergistically with Ferulic Acid.' },
-      { name: 'Organic Green Tea EGCG', function: 'Anti-inflammatory catechin that calms redness and curbs lipid peroxidation.', synergyNote: 'Safe for reactive and acne-prone skin.' },
-      { name: 'Pure Botanical Squalane', function: 'Biocompatible lipid that repairs the skin barrier without clogging pores.', synergyNote: 'Seals active serums for sustained release.' }
-    ],
+    matchScore: 98,
+    amRoutine: selected.am,
+    pmRoutine: selected.pm,
+    keyActives: selected.actives,
     dermatologistTips: [
       'Always apply products from thinnest to thickest consistency for optimal trans-epidermal absorption.',
       'Allow your Vitamin C serum to absorb for 60 seconds before applying moisturizer or sunscreen.',
