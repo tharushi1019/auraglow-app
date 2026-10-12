@@ -40,6 +40,11 @@ export default function ProductDetailPage() {
           setProduct(null);
         } else {
           setProduct(data);
+          if (data.shades && data.shades.length > 0) {
+            setSelectedShade(data.shades[0]);
+          } else {
+            setSelectedShade(null);
+          }
           const related = await getRelatedProducts(data.id);
           setRelatedProducts(related);
         }
@@ -60,19 +65,20 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = async () => {
     if (!product || product.stock === 0) return;
-    const addedSuccess = await addToCart(product, quantity, selectedShade);
+    const shadeName = selectedShade?.name || (typeof selectedShade === 'string' ? selectedShade : null);
+    const addedSuccess = await addToCart(product, quantity, shadeName);
     if (addedSuccess) {
       setAdded(true);
-      showToast(`🌸 Added ${quantity} × "${product.name}" to your shopping bag!`);
+      showToast(`🌸 Added ${quantity} × "${product.name}" ${shadeName ? `(${shadeName})` : ''} to your shopping bag!`);
       setTimeout(() => setAdded(false), 2000);
     }
   };
 
-
   const handleBuyNow = async () => {
     if (!product || product.stock === 0) return;
     if (requireAuth('checkout immediately')) return;
-    const addedSuccess = await addToCart(product, quantity, selectedShade);
+    const shadeName = selectedShade?.name || (typeof selectedShade === 'string' ? selectedShade : null);
+    const addedSuccess = await addToCart(product, quantity, shadeName);
     if (!addedSuccess) return;
     showToast(`🛍️ Proceeding to checkout with "${product.name}"...`);
     setTimeout(() => navigate('/checkout'), 800);
@@ -294,7 +300,6 @@ export default function ProductDetailPage() {
             <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-base)', lineHeight: 1.6, margin: 0 }}>
               {product.description}
             </p>
-
 
             {/* Actions: Quantity + Add to Bag + Buy Now + Wishlist */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
