@@ -455,7 +455,7 @@ export default function AdminProducts() {
                         marginBottom: '6px'
                       }}
                     >
-                      <span>{uploading ? '⏳ Uploading...' : '📁 Upload Photo (ImgBB)'}</span>
+                      <span>{uploading ? '⏳ Uploading...' : '📁 Upload Photo'}</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -469,7 +469,7 @@ export default function AdminProducts() {
                       />
                     </label>
                     <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                      Upload AI product photos, PNG, or JPG directly.
+                      Upload image file directly or paste an image URL below.
                     </div>
                   </div>
                 </div>
@@ -615,7 +615,7 @@ export default function AdminProducts() {
                         marginBottom: '6px'
                       }}
                     >
-                      <span>{uploading ? '⏳ Uploading...' : '📁 Upload New Photo (ImgBB)'}</span>
+                      <span>{uploading ? '⏳ Uploading...' : '📁 Upload New Photo'}</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -629,7 +629,7 @@ export default function AdminProducts() {
                       />
                     </label>
                     <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                      Select an AI image file from your computer to upload directly to ImgBB.
+                      Upload image file directly or paste an image URL below.
                     </div>
                   </div>
                 </div>
