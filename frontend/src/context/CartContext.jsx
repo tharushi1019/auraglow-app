@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { fetchCart, syncCart } from '@/services/cartService';
+import { addCartItem, clearCart as clearRemoteCart, fetchCart, removeCartItem } from '@/services/cartService';
 import { fetchWishlist, toggleWishlistBackend } from '@/services/wishlistService';
-import { products as mockProducts } from '@/data/mockData';
 import { useAuth } from '@/context/AuthContext';
 import AuthRequiredModal from '@/components/common/AuthRequiredModal';
 
@@ -11,65 +10,76 @@ export function useCart() {
   return useContext(CartContext);
 }
 
+function normalizeCart(items) {
+  return items.map(item => {
+    if (!item.product) throw new Error('The server returned a cart item without product details.');
+    return {
+      ...item,
+      id: item.productId || item.id,
+      price: Number(item.product.price ?? item.price),
+      quantity: Number(item.quantity),
+    };
+  });
+}
+
+function getErrorMessage(error) {
+  return error.message || 'The request could not be completed.';
+}
+
 export function CartProvider({ children }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [dataUserId, setDataUserId] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authActionName, setAuthActionName] = useState('add items to your shopping bag');
 
   // Load data when user logs in, reset when logged out
   useEffect(() => {
+    let active = true;
+    if (authLoading) {
+      return () => { active = false; };
+    }
     if (!user) {
       setCart([]);
       setWishlist([]);
+      setDataUserId(null);
       localStorage.removeItem('auraglow_cart');
       localStorage.removeItem('auraglow_wishlist');
+      setError('');
       setLoading(false);
-      return;
+      return () => { active = false; };
     }
 
     async function loadData() {
       setLoading(true);
-      const [rawCart, rawWishlist] = await Promise.all([
-        fetchCart(),
-        fetchWishlist(),
-      ]);
-
-      const enrichedCart = (rawCart || []).map(item => {
-        const prod = mockProducts.find(p => p.id === (item.productId || item.id));
-        return {
-          ...item,
-          id: item.productId || item.id,
-          product: prod || { name: 'AuraGlow Product', price: item.price || 5000, image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=150&q=80' },
-        };
-      });
-
-      const enrichedWishlist = (rawWishlist || []).map(id => {
-        return mockProducts.find(p => p.id === id);
-      }).filter(Boolean);
-
-      setCart(enrichedCart);
-      setWishlist(enrichedWishlist);
-      setLoading(false);
+      setError('');
+      setCart([]);
+      setWishlist([]);
+      try {
+        const [rawCart, rawWishlist] = await Promise.all([fetchCart(), fetchWishlist()]);
+        if (!active) return;
+        setCart(normalizeCart(rawCart));
+        setWishlist(rawWishlist);
+        setDataUserId(user.id);
+      } catch (loadError) {
+        if (!active) return;
+        setCart([]);
+        setWishlist([]);
+        setDataUserId(user.id);
+        setError(getErrorMessage(loadError));
+      } finally {
+        if (active) setLoading(false);
+      }
     }
     loadData();
-  }, [user]);
 
-  // Sync Cart to local/remote when modified
-  const updateCartState = async (newCart) => {
-    setCart(newCart);
-    await syncCart(
-      newCart.map(item => ({
-        productId: item.id,
-        quantity: item.quantity,
-        price: item.price,
-      }))
-    );
-  };
+    return () => { active = false; };
+  }, [user, authLoading]);
 
-  const addToCart = async (product, qty = 1) => {
+  const addToCart = async (product, qty = 1, selectedShade = null) => {
     if (!user) {
       setAuthActionName('add products to your shopping bag');
       setAuthModalOpen(true);
@@ -77,41 +87,67 @@ export function CartProvider({ children }) {
     }
 
     const quantity = Number(qty);
-    const existingIndex = cart.findIndex(item => item.id === product.id);
-    let newCart = [...cart];
-
-    if (existingIndex > -1) {
-      newCart[existingIndex].quantity += quantity;
-    } else {
-      newCart.push({
-        id: product.id,
-        quantity,
-        price: product.price,
-        product,
-      });
+    if (!Number.isSafeInteger(quantity) || quantity < 1) {
+      setError('Quantity must be a positive whole number.');
+      return false;
     }
-    await updateCartState(newCart);
-    return true;
+
+    const existing = cart.find(item => item.id === product.id && (item.selectedShade || null) === selectedShade);
+    try {
+      const items = await addCartItem({
+        productId: product.id,
+        quantity: (existing?.quantity || 0) + quantity,
+        selectedShade,
+      });
+      setCart(normalizeCart(items));
+      setError('');
+      return true;
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+      return false;
+    }
   };
 
-  const removeFromCart = async (productId) => {
-    const newCart = cart.filter(item => item.id !== productId);
-    await updateCartState(newCart);
+  const visibleCart = dataUserId === user?.id ? cart : [];
+  const visibleWishlist = dataUserId === user?.id ? wishlist : [];
+
+  const removeFromCart = async (productId, selectedShade = null) => {
+    try {
+      setCart(normalizeCart(await removeCartItem(productId, selectedShade)));
+      setError('');
+      return true;
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+      return false;
+    }
   };
 
-  const updateQuantity = async (productId, qty) => {
-    const quantity = Math.max(1, Number(qty));
-    const newCart = cart.map(item => {
-      if (item.id === productId) {
-        return { ...item, quantity };
-      }
-      return item;
-    });
-    await updateCartState(newCart);
+  const updateQuantity = async (productId, qty, selectedShade = null) => {
+    const quantity = Number(qty);
+    if (!Number.isSafeInteger(quantity) || quantity < 1) {
+      setError('Quantity must be a positive whole number.');
+      return false;
+    }
+    try {
+      setCart(normalizeCart(await addCartItem({ productId, quantity, selectedShade })));
+      setError('');
+      return true;
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+      return false;
+    }
   };
 
   const clearCart = async () => {
-    await updateCartState([]);
+    try {
+      await clearRemoteCart();
+      setCart([]);
+      setError('');
+      return true;
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+      return false;
+    }
   };
 
   const toggleWishlist = async (product) => {
@@ -121,19 +157,14 @@ export function CartProvider({ children }) {
       return false;
     }
 
-    const isMatched = wishlist.some(p => p.id === product.id);
-    let newWishlist = [];
-
-    if (isMatched) {
-      newWishlist = wishlist.filter(p => p.id !== product.id);
-    } else {
-      newWishlist = [...wishlist, product];
+    try {
+      setWishlist(await toggleWishlistBackend(product.id));
+      setError('');
+      return true;
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+      return false;
     }
-    setWishlist(newWishlist);
-
-    const syncedIds = await toggleWishlistBackend(product.id);
-    localStorage.setItem('auraglow_wishlist', JSON.stringify(syncedIds));
-    return true;
   };
 
   const isInWishlist = (productId) => {
@@ -143,9 +174,10 @@ export function CartProvider({ children }) {
   return (
     <CartContext.Provider
       value={{
-        cart,
-        wishlist,
+        cart: visibleCart,
+        wishlist: visibleWishlist,
         loading,
+        error,
         addToCart,
         removeFromCart,
         updateQuantity,
@@ -171,4 +203,3 @@ export function CartProvider({ children }) {
     </CartContext.Provider>
   );
 }
-

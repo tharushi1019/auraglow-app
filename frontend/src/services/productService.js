@@ -27,15 +27,17 @@ export async function getProducts(params = {}) {
     if (params.limit) query.append('limit', params.limit);
 
     const res = await fetch(`${API_BASE}/products?${query.toString()}`);
-    if (!res.ok) throw new Error('API fetch failed');
     const data = await res.json();
+    if (!res.ok) throw new Error(data?.message || 'The product catalog is temporarily unavailable.');
     if (data && data.success && Array.isArray(data.products)) {
       return data;
     }
     throw new Error('Invalid API response format');
-  } catch {
-    // Client-side fallback filter
-    return filterMockProducts(params);
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error('Unable to reach the product catalog API. Check that the backend is running and the API URL is correct.');
+    }
+    throw new Error(error.message || 'Unable to load products.');
   }
 }
 
@@ -45,15 +47,17 @@ export async function getProducts(params = {}) {
 export async function getProductById(id) {
   try {
     const res = await fetch(`${API_BASE}/products/${id}`);
-    if (!res.ok) throw new Error('API fetch failed');
     const data = await res.json();
+    if (!res.ok) throw new Error(data?.message || 'Product details are temporarily unavailable.');
     if (data && data.success && data.product) {
       return data.product;
     }
     throw new Error('Product not found in API');
-  } catch {
-    const found = mockProducts.find(p => p.id === id || p.id.toLowerCase() === id.toLowerCase());
-    return found || null;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error('Unable to reach the product API. Check that the backend is running and the API URL is correct.');
+    }
+    throw new Error(error.message || 'Unable to load product details.');
   }
 }
 
@@ -114,76 +118,4 @@ export async function getRelatedProducts(id) {
     );
     return related.length > 0 ? related.slice(0, 4) : mockProducts.filter(p => p.id !== id).slice(0, 4);
   }
-}
-
-/**
- * Helper: Client-side mock filtering fallback
- */
-function filterMockProducts(params = {}) {
-  let list = [...mockProducts];
-
-  if (params.search && params.search.trim()) {
-    const q = params.search.trim().toLowerCase();
-    list = list.filter(
-      p =>
-        p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        p.brand.toLowerCase().includes(q) ||
-        (p.tags && p.tags.some(t => t.toLowerCase().includes(q))) ||
-        (p.ingredients && p.ingredients.some(i => i.toLowerCase().includes(q)))
-    );
-  }
-
-  if (params.category && params.category !== 'all') {
-    list = list.filter(p => p.category.toLowerCase() === params.category.toLowerCase());
-  }
-
-  if (params.minPrice) {
-    list = list.filter(p => p.price >= Number(params.minPrice));
-  }
-  if (params.maxPrice) {
-    list = list.filter(p => p.price <= Number(params.maxPrice));
-  }
-
-  if (params.isVegan) {
-    list = list.filter(p => p.isVegan === true);
-  }
-  if (params.isCrueltyFree) {
-    list = list.filter(p => p.isCrueltyFree === true);
-  }
-  if (params.inStock) {
-    list = list.filter(p => p.stock > 0);
-  }
-
-  switch (params.sort) {
-    case 'price-asc':
-      list.sort((a, b) => a.price - b.price);
-      break;
-    case 'price-desc':
-      list.sort((a, b) => b.price - a.price);
-      break;
-    case 'rating-desc':
-      list.sort((a, b) => b.rating - a.rating);
-      break;
-    case 'name-asc':
-      list.sort((a, b) => a.name.localeCompare(b.name));
-      break;
-    case 'bestseller':
-    default:
-      list.sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0));
-      break;
-  }
-
-  const page = parseInt(params.page || 1, 10);
-  const limit = parseInt(params.limit || 20, 10);
-  const start = (page - 1) * limit;
-
-  return {
-    success: true,
-    total: list.length,
-    count: list.slice(start, start + limit).length,
-    page,
-    totalPages: Math.ceil(list.length / limit) || 1,
-    products: list.slice(start, start + limit),
-  };
 }

@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
-import { NavLink, Outlet, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/context/CurrencyContext';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { getProducts } from '@/services/productService';
 
 const NAV_SECTIONS = [
   {
@@ -40,8 +43,102 @@ const navLinkStyle = (isActive) => ({
 
 export default function AdminLayout() {
   const { currency, setCurrency, availableCurrencies } = useCurrency();
-  const [notifications] = useState(3);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState({ products: [], orders: [] });
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [notifications, setNotifications] = useState([]);
+  const [notificationError, setNotificationError] = useState('');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  useEffect(() => {
+    async function loadNotifications() {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, status, created_at, contact_email')
+        .in('status', ['pending', 'paid', 'processing'])
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('[AdminLayout] Notification query failed:', error.message);
+        setNotificationError('Unable to load order notifications.');
+        return;
+      }
+      setNotifications(data || []);
+    }
+
+    loadNotifications();
+  }, []);
+
+  useEffect(() => {
+    function handleShortcut(event) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setSearchOpen(true);
+      } else if (event.key === 'Escape') {
+        setSearchOpen(false);
+        setNotificationsOpen(false);
+        setProfileOpen(false);
+      }
+    }
+
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, []);
+
+  async function runSearch(event) {
+    event?.preventDefault();
+    const term = searchTerm.trim();
+    if (!term) {
+      setSearchResults({ products: [], orders: [] });
+      setSearchError('');
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError('');
+    try {
+      const [productResponse, orderResponse] = await Promise.all([
+        getProducts({ search: term, limit: 5 }),
+        supabase
+          .from('orders')
+          .select('id, status, created_at, contact_email, users(name), order_items(product_name)')
+          .order('created_at', { ascending: false })
+          .limit(100),
+      ]);
+
+      if (orderResponse.error) throw orderResponse.error;
+      const normalizedTerm = term.toLowerCase();
+      const orders = (orderResponse.data || [])
+        .filter(order => {
+          const shortId = order.id.replace(/-/g, '').slice(-6);
+          const itemNames = (order.order_items || []).map(item => item.product_name).join(' ');
+          return [order.id, shortId, order.contact_email, order.users?.name, itemNames]
+            .some(value => value?.toLowerCase().includes(normalizedTerm));
+        })
+        .slice(0, 5);
+
+      setSearchResults({ products: productResponse.products || [], orders });
+    } catch (error) {
+      console.error('[AdminLayout] Admin search failed:', error.message);
+      setSearchError('Search is temporarily unavailable. Please try again.');
+      setSearchResults({ products: [], orders: [] });
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
+  function openSearchResult(path) {
+    setSearchOpen(false);
+    setSearchTerm('');
+    setSearchResults({ products: [], orders: [] });
+    navigate(path);
+  }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
@@ -185,7 +282,7 @@ export default function AdminLayout() {
         }}>
           {/* Search bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            <div style={{
+            <button type="button" onClick={() => setSearchOpen(true)} style={{
               display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid var(--color-border)',
@@ -193,13 +290,13 @@ export default function AdminLayout() {
               padding: '8px 16px',
               minWidth: '220px',
               cursor: 'text',
+              color: 'inherit',
             }}
-              onClick={() => setSearchOpen(true)}
             >
               <span style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>🔍</span>
               <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>Search orders, products…</span>
               <span style={{ marginLeft: 'auto', color: 'var(--color-text-muted)', fontSize: '11px', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--color-border)', borderRadius: '4px', padding: '1px 5px' }}>⌘K</span>
-            </div>
+            </button>
           </div>
 
           {/* Right side */}
@@ -225,9 +322,11 @@ export default function AdminLayout() {
             </select>
 
             {/* Notification bell */}
-            <div style={{ position: 'relative', cursor: 'pointer' }}>
-              <span style={{ fontSize: '20px', color: 'var(--color-text-secondary)' }}>🔔</span>
-              {notifications > 0 && (
+            <div style={{ position: 'relative' }}>
+              <button type="button" aria-label="View order notifications" onClick={() => setNotificationsOpen(!notificationsOpen)} style={{ background: 'none', border: 0, cursor: 'pointer', padding: 4 }}>
+                <span style={{ fontSize: '20px', color: 'var(--color-text-secondary)' }}>🔔</span>
+              </button>
+              {notifications.length > 0 && (
                 <span style={{
                   position: 'absolute', top: '-4px', right: '-6px',
                   background: 'var(--gradient-brand-vibrant)',
@@ -235,8 +334,21 @@ export default function AdminLayout() {
                   borderRadius: '50%', width: '16px', height: '16px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  {notifications}
+                  {notifications.length}
                 </span>
+              )}
+              {notificationsOpen && (
+                <div style={{ position: 'absolute', right: 0, top: '34px', width: '290px', padding: 'var(--space-3)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-secondary)', boxShadow: '0 12px 32px rgba(0,0,0,0.35)', zIndex: 80 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 'var(--space-2)' }}>Order notifications</div>
+                  {notificationError ? (
+                    <div style={{ color: 'var(--color-warning)', fontSize: 'var(--text-xs)' }}>{notificationError}</div>
+                  ) : notifications.length ? notifications.map(order => (
+                    <button key={order.id} type="button" onClick={() => { setNotificationsOpen(false); navigate('/admin/orders'); }} style={{ width: '100%', textAlign: 'left', padding: '8px 4px', border: 0, borderTop: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', background: 'transparent', cursor: 'pointer', fontSize: 'var(--text-xs)' }}>
+                      Order #{order.id.replace(/-/g, '').slice(-6).toUpperCase()} · {order.status}
+                      <div style={{ color: 'var(--color-text-muted)', marginTop: 3 }}>{order.contact_email || 'Customer'} · {new Date(order.created_at).toLocaleString()}</div>
+                    </button>
+                  )) : <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>No orders need attention.</div>}
+                </div>
               )}
             </div>
 
@@ -244,7 +356,8 @@ export default function AdminLayout() {
             <div style={{ width: '1px', height: '28px', background: 'var(--color-border)' }} />
 
             {/* Admin profile */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer' }}>
+            <div style={{ position: 'relative' }}>
+            <button type="button" aria-label="Admin profile menu" onClick={() => setProfileOpen(!profileOpen)} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', border: 0, padding: 0, background: 'transparent', textAlign: 'left' }}>
               <div style={{
                 width: '36px', height: '36px', borderRadius: '50%',
                 background: 'var(--gradient-brand-vibrant)',
@@ -252,15 +365,23 @@ export default function AdminLayout() {
                 color: '#0d0d0f', fontWeight: '800', fontSize: '14px',
                 boxShadow: '0 0 12px rgba(232,180,160,0.3)',
               }}>
-                T
+                {(user?.name || 'Admin').charAt(0).toUpperCase()}
               </div>
               <div>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: '600', color: 'var(--color-text-primary)', lineHeight: 1.2 }}>Tharushi</div>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: '600', color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{user?.name || 'Admin'}</div>
                 <div style={{ fontSize: '11px', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-success)', display: 'inline-block' }} />
                   Admin
                 </div>
               </div>
+            </button>
+            {profileOpen && (
+              <div style={{ position: 'absolute', right: 0, top: '48px', minWidth: '150px', padding: '6px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-secondary)', boxShadow: '0 12px 32px rgba(0,0,0,0.35)', zIndex: 80 }}>
+                <button type="button" onClick={() => { logout(); navigate('/login', { replace: true }); }} style={{ width: '100%', textAlign: 'left', border: 0, borderRadius: 'var(--radius-sm)', padding: '9px 10px', color: 'var(--color-text-primary)', background: 'transparent', cursor: 'pointer', fontSize: 'var(--text-sm)' }}>
+                  Log out
+                </button>
+              </div>
+            )}
             </div>
           </div>
         </header>
@@ -270,6 +391,36 @@ export default function AdminLayout() {
           <Outlet />
         </div>
       </main>
+      {searchOpen && (
+        <div onClick={() => setSearchOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(13,13,15,0.72)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '12vh 16px' }}>
+          <div onClick={event => event.stopPropagation()} style={{ width: 'min(620px, 100%)', maxHeight: '70vh', overflowY: 'auto', padding: 'var(--space-5)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', background: 'var(--color-bg-secondary)', boxShadow: '0 20px 60px rgba(0,0,0,0.45)' }}>
+            <form onSubmit={runSearch} style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <input autoFocus value={searchTerm} onChange={event => setSearchTerm(event.target.value)} placeholder="Search real products, orders, or customers…" style={{ flex: 1 }} />
+              <button className="btn btn-primary btn-sm" disabled={searchLoading}>{searchLoading ? 'Searching…' : 'Search'}</button>
+            </form>
+            {searchError && <p role="alert" style={{ color: 'var(--color-warning)', fontSize: 'var(--text-sm)' }}>{searchError}</p>}
+            {searchResults.products.length > 0 && <>
+              <h3 style={{ margin: 'var(--space-4) 0 var(--space-2)', fontSize: 'var(--text-sm)' }}>Products</h3>
+              {searchResults.products.map(product => (
+                <button key={product.id} type="button" onClick={() => openSearchResult(`/admin/products?search=${encodeURIComponent(product.name)}`)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 4px', border: 0, borderTop: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer' }}>
+                  {product.name} <span style={{ color: 'var(--color-text-muted)' }}>· {product.category}</span>
+                </button>
+              ))}
+            </>}
+            {searchResults.orders.length > 0 && <>
+              <h3 style={{ margin: 'var(--space-4) 0 var(--space-2)', fontSize: 'var(--text-sm)' }}>Orders</h3>
+              {searchResults.orders.map(order => (
+                <button key={order.id} type="button" onClick={() => openSearchResult(`/admin/orders?search=${encodeURIComponent(order.id.replace(/-/g, '').slice(-6))}`)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 4px', border: 0, borderTop: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer' }}>
+                  Order #{order.id.replace(/-/g, '').slice(-6).toUpperCase()} <span style={{ color: 'var(--color-text-muted)' }}>· {order.users?.name || order.contact_email} · {order.status}</span>
+                </button>
+              ))}
+            </>}
+            {!searchLoading && searchTerm.trim() && !searchError && !searchResults.products.length && !searchResults.orders.length && (
+              <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>No matching products or orders.</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

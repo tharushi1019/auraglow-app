@@ -8,6 +8,7 @@
 const express = require('express');
 const router = express.Router();
 const checkoutController = require('../controllers/checkout.controller');
+const { authenticate } = require('../middleware/auth.middleware');
 
 // POST /api/v1/checkout/create-payment-intent — Create Stripe PaymentIntent (sandbox)
 router.post('/create-payment-intent', checkoutController.createPaymentIntent);
@@ -23,5 +24,6 @@ router.get('/orders', checkoutController.getOrders);
 
 // GET /api/v1/checkout/orders/:orderId — Get specific order + tracking
 router.get('/orders/:orderId', checkoutController.getOrderById);
+router.patch('/orders/:orderId/cancel', authenticate, checkoutController.cancelOrder);
 
 module.exports = router;

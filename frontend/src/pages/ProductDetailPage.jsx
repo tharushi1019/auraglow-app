@@ -15,11 +15,12 @@ import { getProductById, getRelatedProducts } from '@/services/productService';
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart, toggleWishlist, isInWishlist, requireAuth } = useCart();
+  const { addToCart, toggleWishlist, isInWishlist, requireAuth, error: cartError } = useCart();
   const { formatPrice } = useCurrency();
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [productError, setProductError] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [selectedShade, setSelectedShade] = useState(null);
   const [activeTab, setActiveTab] = useState('description');
@@ -31,16 +32,23 @@ export default function ProductDetailPage() {
   useEffect(() => {
     async function loadProduct() {
       setLoading(true);
+      setProductError('');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      const data = await getProductById(id);
-      if (!data) {
+      try {
+        const data = await getProductById(id);
+        if (!data) {
+          setProduct(null);
+        } else {
+          setProduct(data);
+          const related = await getRelatedProducts(data.id);
+          setRelatedProducts(related);
+        }
+      } catch (loadError) {
         setProduct(null);
-      } else {
-        setProduct(data);
-        const related = await getRelatedProducts(data.id);
-        setRelatedProducts(related);
+        setProductError(loadError.message || 'Unable to load product details.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     loadProduct();
   }, [id]);
@@ -52,7 +60,7 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = async () => {
     if (!product || product.stock === 0) return;
-    const addedSuccess = await addToCart(product, quantity);
+    const addedSuccess = await addToCart(product, quantity, selectedShade);
     if (addedSuccess) {
       setAdded(true);
       showToast(`🌸 Added ${quantity} × "${product.name}" to your shopping bag!`);
@@ -64,7 +72,8 @@ export default function ProductDetailPage() {
   const handleBuyNow = async () => {
     if (!product || product.stock === 0) return;
     if (requireAuth('checkout immediately')) return;
-    await addToCart(product, quantity);
+    const addedSuccess = await addToCart(product, quantity, selectedShade);
+    if (!addedSuccess) return;
     showToast(`🛍️ Proceeding to checkout with "${product.name}"...`);
     setTimeout(() => navigate('/checkout'), 800);
   };
@@ -91,7 +100,7 @@ export default function ProductDetailPage() {
           <div style={{ fontSize: '3.5rem' }}>🍃</div>
           <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: '800', color: 'var(--color-text-primary)' }}>Product Not Found</h2>
           <p style={{ color: 'var(--color-text-secondary)', maxWidth: '400px', textAlign: 'center' }}>
-            The clean beauty formula you are looking for might be out of season or renamed.
+            {productError || 'The clean beauty formula you are looking for might be out of season or renamed.'}
           </p>
           <Link to="/products" className="btn btn-primary btn-pill">
             Explore All Products 🌸
@@ -167,6 +176,7 @@ export default function ProductDetailPage() {
 
       {/* Product Hero Showcase */}
       <main style={{ maxWidth: '1280px', margin: '0 auto', padding: 'var(--space-8) var(--space-10)', width: '100%', boxSizing: 'border-box' }}>
+        {cartError && <p role="alert" style={{ color: 'var(--color-accent-rose)', marginBottom: 'var(--space-4)' }}>{cartError}</p>}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',

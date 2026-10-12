@@ -34,7 +34,13 @@ export default function Login() {
         navigate('/profile');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password.');
+      if (!err.response) {
+        setError('Unable to reach the AuraGlow API. Check that the backend is running and try again.');
+      } else if (err.response.status >= 500) {
+        setError(err.response.data?.message || 'The login service is temporarily unavailable. Please try again.');
+      } else {
+        setError(err.response.data?.message || 'Invalid email or password.');
+      }
     } finally {
       setLoading(false);
     }

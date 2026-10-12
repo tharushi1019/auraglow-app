@@ -7,7 +7,7 @@ import { useCurrency } from '@/context/CurrencyContext';
 
 export default function CartPage() {
   const navigate = useNavigate();
-  const { cart, removeFromCart, updateQuantity, clearCart, requireAuth } = useCart();
+  const { cart, removeFromCart, updateQuantity, clearCart, requireAuth, error, loading } = useCart();
   const { formatPrice } = useCurrency();
   const [promoCode, setPromoCode] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -60,7 +60,11 @@ export default function CartPage() {
           Your Shopping Bag 🛍️
         </h1>
 
-        {cart.length === 0 ? (
+        {error && <p role="alert" style={{ color: 'var(--color-accent-rose)', marginBottom: 'var(--space-4)' }}>{error}</p>}
+
+        {loading ? (
+          <p role="status" style={{ color: 'var(--color-text-secondary)' }}>Loading your shopping bag...</p>
+        ) : cart.length === 0 ? (
           <div style={{
             background: 'var(--color-bg-card)',
             border: '1px solid var(--color-border)',
@@ -90,7 +94,7 @@ export default function CartPage() {
                 const prod = item.product;
                 return (
                   <div
-                    key={item.id}
+                    key={item.cartItemId || `${item.id}-${item.selectedShade || 'default'}`}
                     className="card-hover-glow"
                     style={{
                       background: 'var(--color-bg-card)',
@@ -116,6 +120,7 @@ export default function CartPage() {
                       <Link to={`/products/${item.id}`} style={{ fontSize: 'var(--text-base)', fontWeight: '700', color: 'var(--color-text-primary)', textDecoration: 'none' }}>
                         {prod.name}
                       </Link>
+                      {item.selectedShade && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Shade: {item.selectedShade}</span>}
                       <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
                         Unit: {formatPrice(prod.price)}
                       </span>
@@ -133,7 +138,7 @@ export default function CartPage() {
                       {/* Qty edit */}
                       <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-full)', padding: '2px 6px', background: 'var(--color-bg-secondary)' }}>
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedShade)}
                           disabled={item.quantity <= 1}
                           style={{ background: 'none', border: 'none', color: 'var(--color-text-primary)', cursor: 'pointer', padding: '2px 6px', fontSize: '13px' }}
                         >
@@ -143,7 +148,7 @@ export default function CartPage() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedShade)}
                           disabled={item.quantity >= (prod.stock || 10)}
                           style={{ background: 'none', border: 'none', color: 'var(--color-text-primary)', cursor: 'pointer', padding: '2px 6px', fontSize: '13px' }}
                         >
@@ -160,7 +165,7 @@ export default function CartPage() {
 
                       {/* Remove Button */}
                       <button
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item.id, item.selectedShade)}
                         style={{ background: 'none', border: 'none', color: 'var(--color-accent-rose)', cursor: 'pointer', fontSize: '16px', padding: 0 }}
                         title="Remove item"
                       >

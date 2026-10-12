@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCurrency } from '@/context/CurrencyContext';
 import { supabase } from '@/lib/supabase';
 import { products as mockProducts } from '@/data/mockData';
@@ -36,12 +37,15 @@ function normalize(p) {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function AdminProducts() {
+  const [searchParams] = useSearchParams();
   const { formatPrice } = useCurrency();
   const [products, setProducts]     = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
-  const [search, setSearch]         = useState('');
+  const [search, setSearch]         = useState(() => searchParams.get('search') || '');
   const [filterCategory, setFilterCategory] = useState('All');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [showAddModal, setShowAddModal]      = useState(false);
   const [editProduct, setEditProduct]        = useState(null);
   const [saving, setSaving]                 = useState(false);
@@ -51,6 +55,8 @@ export default function AdminProducts() {
 
   // Page title
   useEffect(() => { document.title = 'AuraGlow Admin — Inventory'; }, []);
+  useEffect(() => { setSearch(searchParams.get('search') || ''); }, [searchParams]);
+  useEffect(() => { setPage(1); }, [search, filterCategory]);
 
   // ── Fetch products from Supabase ──────────────────────────────────────────
   useEffect(() => {
@@ -174,11 +180,17 @@ export default function AdminProducts() {
 
   // ── Filtered view ─────────────────────────────────────────────────────────
   const categories = ['All', ...new Set(products.map(p => p.category))];
-  const visible = products.filter(p => {
+  const filteredProducts = products.filter(p => {
     const matchSearch   = p.name.toLowerCase().includes(search.toLowerCase());
     const matchCategory = filterCategory === 'All' || p.category === filterCategory;
     return matchSearch && matchCategory;
   });
+  const pageCount = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  const visible = filteredProducts.slice((page - 1) * pageSize, page * pageSize);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const lowCount  = products.filter(p => p.status === 'Low Stock').length;
@@ -263,6 +275,27 @@ export default function AdminProducts() {
           </table>
         )}
       </div>
+
+      {!loading && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap', color: 'var(--color-text-secondary)', fontSize: 'var(--text-xs)', marginTop: 'var(--space-4)' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            Rows per page
+            <select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }} style={{ width: 'auto', padding: '6px 10px' }}>
+              {[10, 20, 50].map(size => <option key={size} value={size}>{size}</option>)}
+            </select>
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPage(current => Math.max(1, current - 1))} disabled={page === 1}>Previous</button>
+            {Array.from({ length: pageCount }, (_, index) => index + 1).map(pageNumber => (
+              <button key={pageNumber} type="button" className={pageNumber === page ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'} onClick={() => setPage(pageNumber)} aria-current={pageNumber === page ? 'page' : undefined}>
+                {pageNumber}
+              </button>
+            ))}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPage(current => Math.min(pageCount, current + 1))} disabled={page === pageCount}>Next</button>
+          </div>
+          <span>{filteredProducts.length ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filteredProducts.length)} of ${filteredProducts.length}` : '0 products'}</span>
+        </div>
+      )}
 
       {/* Add Product Modal */}
       {showAddModal && (
