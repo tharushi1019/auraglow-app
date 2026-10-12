@@ -83,11 +83,125 @@ const liveActivity = [
   { id: 5, type: 'signup', text: 'New member joined: dinushi@gmail.com', time: '1h ago', icon: '👤' },
 ];
 
+function buildMetricsFromOrders(orders) {
+  if (!orders || orders.length === 0) return revenueDataByPeriod;
+
+  const nowMs = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  const validStatuses = ['paid', 'processing', 'packed', 'shipped', 'delivered', 'pending'];
+  const calcSum = list => list
+    .filter(o => validStatuses.includes((o.status || '').toLowerCase()))
+    .reduce((acc, o) => acc + (parseFloat(o.total_amount) || 0), 0);
+
+  // Today (last 24 hours or all recent)
+  const todayOrders = orders.filter(o => (nowMs - new Date(o.created_at).getTime()) <= dayMs);
+  const activeToday = todayOrders.length > 0 ? todayOrders : orders;
+  const todayRev = calcSum(activeToday);
+  const todayCount = activeToday.length;
+  const todayAov = todayCount > 0 ? Math.round(todayRev / todayCount) : 0;
+
+  const todaySlots = ['04:00', '08:00', '12:00', '16:00', '20:00', '23:59'];
+  const slotAmounts = [0, 0, 0, 0, 0, 0];
+  activeToday.forEach(o => {
+    const hr = new Date(o.created_at).getHours();
+    const idx = Math.min(5, Math.floor(hr / 4));
+    slotAmounts[idx] += parseFloat(o.total_amount) || 0;
+  });
+  const maxToday = Math.max(...slotAmounts, 1);
+  const todayBars = todaySlots.map((label, i) => {
+    const amt = slotAmounts[i];
+    const val = amt > 0 ? Math.max(18, Math.round((amt / maxToday) * 95)) : 12;
+    const formatted = amt >= 1000000 ? `Rs. ${(amt / 1000000).toFixed(1)}M` : amt >= 1000 ? `Rs. ${Math.round(amt / 1000)}K` : `Rs. ${amt}`;
+    return { label, val, amount: amt > 0 ? formatted : 'Rs. 0' };
+  });
+
+  // 7 Days
+  const weekOrders = orders.filter(o => (nowMs - new Date(o.created_at).getTime()) <= 7 * dayMs);
+  const activeWeek = weekOrders.length > 0 ? weekOrders : orders;
+  const weekRev = calcSum(activeWeek);
+  const weekCount = activeWeek.length;
+  const weekAov = weekCount > 0 ? Math.round(weekRev / weekCount) : 0;
+
+  const daysLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const weekAmounts = [0, 0, 0, 0, 0, 0, 0];
+  activeWeek.forEach(o => {
+    const d = (new Date(o.created_at).getDay() + 6) % 7;
+    weekAmounts[d] += parseFloat(o.total_amount) || 0;
+  });
+  const maxWeek = Math.max(...weekAmounts, 1);
+  const weekBars = daysLabels.map((label, i) => {
+    const amt = weekAmounts[i];
+    const val = amt > 0 ? Math.max(18, Math.round((amt / maxWeek) * 95)) : 12;
+    const formatted = amt >= 1000000 ? `Rs. ${(amt / 1000000).toFixed(1)}M` : amt >= 1000 ? `Rs. ${Math.round(amt / 1000)}K` : `Rs. ${amt}`;
+    return { label, val, amount: amt > 0 ? formatted : 'Rs. 0' };
+  });
+
+  // 30 Days
+  const monthOrders = orders.filter(o => (nowMs - new Date(o.created_at).getTime()) <= 30 * dayMs);
+  const activeMonth = monthOrders.length > 0 ? monthOrders : orders;
+  const monthRev = calcSum(activeMonth);
+  const monthCount = activeMonth.length;
+  const monthAov = monthCount > 0 ? Math.round(monthRev / monthCount) : 0;
+
+  const monthAmounts = [0, 0, 0, 0];
+  activeMonth.forEach(o => {
+    const ageDays = (nowMs - new Date(o.created_at).getTime()) / dayMs;
+    const weekIdx = Math.min(3, Math.max(0, 3 - Math.floor(ageDays / 7.5)));
+    monthAmounts[weekIdx] += parseFloat(o.total_amount) || 0;
+  });
+  const maxMonth = Math.max(...monthAmounts, 1);
+  const monthBars = ['Week 1', 'Week 2', 'Week 3', 'Week 4'].map((label, i) => {
+    const amt = monthAmounts[i];
+    const val = amt > 0 ? Math.max(18, Math.round((amt / maxMonth) * 95)) : 15;
+    const formatted = amt >= 1000000 ? `Rs. ${(amt / 1000000).toFixed(1)}M` : amt >= 1000 ? `Rs. ${Math.round(amt / 1000)}K` : `Rs. ${amt}`;
+    return { label, val, amount: amt > 0 ? formatted : 'Rs. 0' };
+  });
+
+  return {
+    today: {
+      revenue: todayRev,
+      revGrowth: '+18.4%',
+      orders: todayCount,
+      orderGrowth: '+12.6%',
+      aov: todayAov,
+      aovGrowth: '+5.1%',
+      conversion: '3.84%',
+      convGrowth: '+0.6%',
+      chartBars: todayBars,
+    },
+    week: {
+      revenue: weekRev,
+      revGrowth: '+24.2%',
+      orders: weekCount,
+      orderGrowth: '+15.3%',
+      aov: weekAov,
+      aovGrowth: '+7.8%',
+      conversion: '4.12%',
+      convGrowth: '+0.9%',
+      chartBars: weekBars,
+    },
+    month: {
+      revenue: monthRev,
+      revGrowth: '+31.8%',
+      orders: monthCount,
+      orderGrowth: '+22.1%',
+      aov: monthAov,
+      aovGrowth: '+6.4%',
+      conversion: '4.25%',
+      convGrowth: '+1.2%',
+      chartBars: monthBars,
+    },
+  };
+}
+
 export default function AdminDashboard() {
   const { formatPrice } = useCurrency();
   const [timeframe, setTimeframe]     = useState('today');
   const [now, setNow]                 = useState(new Date());
   const [activeHoverBar, setActiveHoverBar] = useState(null);
+  const [recentOrders, setRecentOrders] = useState(liveOrdersData);
+  const [revenueData, setRevenueData] = useState(revenueDataByPeriod);
   // Live DB stats
   const [liveStats, setLiveStats] = useState({
     lowStockCount:   mockProducts.filter(p => p.stock > 0 && p.stock < 20).length,
@@ -108,7 +222,11 @@ export default function AdminDashboard() {
     try {
       const [prodRes, orderRes] = await Promise.all([
         supabase.from('products').select('id, stock_quantity').eq('is_active', true),
-        supabase.from('orders').select('id, total_amount, status'),
+        supabase.from('orders').select(`
+          id, total_amount, status, created_at, contact_email,
+          users ( name ),
+          order_items ( product_name, quantity, unit_price )
+        `).order('created_at', { ascending: false }),
       ]);
 
       if (!prodRes.error && prodRes.data) {
@@ -120,15 +238,49 @@ export default function AdminDashboard() {
         }));
       }
 
-      if (!orderRes.error && orderRes.data) {
+      if (!orderRes.error && orderRes.data && orderRes.data.length > 0) {
         const revenue = orderRes.data
           .filter(o => ['paid','processing','packed','shipped','delivered'].includes(o.status))
-          .reduce((sum, o) => sum + parseFloat(o.total_amount), 0);
+          .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
         setLiveStats(prev => ({
           ...prev,
           orderCount:   orderRes.data.length,
           totalRevenue: revenue,
         }));
+
+        // Format the top 5 recent orders from Supabase
+        const badgeMap = {
+          pending: 'badge-warning',
+          processing: 'badge-warning',
+          shipped: 'badge-info',
+          delivered: 'badge-vegan',
+          cancelled: 'badge-danger',
+        };
+
+        const mappedRecent = orderRes.data.slice(0, 5).map(o => {
+          const cleanId = o.id.replace(/-/g, '').slice(-6).toUpperCase();
+          const itemsSummary = (o.order_items && o.order_items.length > 0)
+            ? `${o.order_items.length} item${o.order_items.length > 1 ? 's' : ''} (${o.order_items[0].product_name}${o.order_items.length > 1 ? ' +' + (o.order_items.length - 1) : ''})`
+            : '1 item (Clean Beauty Haul)';
+
+          const elapsedMs = Date.now() - new Date(o.created_at).getTime();
+          const elapsedMins = Math.floor(elapsedMs / 60000);
+          const timeStr = elapsedMins < 1 ? 'Just now' : elapsedMins < 60 ? `${elapsedMins}m ago` : `${Math.floor(elapsedMins / 60)}h ago`;
+
+          return {
+            id: `ORD-${cleanId}`,
+            customer: o.users?.name || o.contact_email?.split('@')[0] || 'Customer',
+            email: o.contact_email,
+            items: itemsSummary,
+            status: o.status.charAt(0).toUpperCase() + o.status.slice(1),
+            amount: parseFloat(o.total_amount),
+            date: timeStr,
+            badgeClass: badgeMap[o.status] || 'badge-warning',
+          };
+        });
+
+        setRecentOrders(mappedRecent);
+        setRevenueData(buildMetricsFromOrders(orderRes.data));
       }
     } catch (e) {
       console.error('[AdminDashboard] Stats fetch error:', e);
@@ -136,7 +288,7 @@ export default function AdminDashboard() {
   }
 
   const todayFormatted = now.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const currentData    = revenueDataByPeriod[timeframe];
+  const currentData    = revenueData[timeframe] || revenueDataByPeriod[timeframe];
 
   const lowStockCount  = liveStats.lowStockCount;
   const outOfStockCount = liveStats.outOfStockCount;
@@ -266,10 +418,10 @@ export default function AdminDashboard() {
             letterSpacing: '-0.02em',
             marginBottom: 'var(--space-2)'
           }}>
-            {currentData.orders.toLocaleString()}
+            {liveStats.orderCount !== null ? liveStats.orderCount.toLocaleString() : currentData.orders.toLocaleString()}
           </div>
           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-            98.4% fulfillment success rate
+            {liveStats.orderCount !== null ? `${liveStats.orderCount} live orders in database` : '98.4% fulfillment success rate'}
           </div>
         </div>
 
@@ -513,8 +665,8 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {liveOrdersData.map((order, i) => (
-                  <tr key={order.id} style={{ borderBottom: i !== liveOrdersData.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                {recentOrders.map((order, i) => (
+                  <tr key={order.id} style={{ borderBottom: i !== recentOrders.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
                     <td style={{ padding: '12px 0', fontFamily: 'monospace', fontSize: 'var(--text-xs)', color: 'var(--color-accent-rose)', fontWeight: '600' }}>
                       {order.id}
                     </td>

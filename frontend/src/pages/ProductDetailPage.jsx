@@ -6,6 +6,7 @@ import ProductImageGallery from '@/components/catalog/ProductImageGallery';
 import ReviewsSection from '@/components/reviews/ReviewsSection';
 import SkinMatchBadge from '@/components/reviews/SkinMatchBadge';
 import PersonalizedRoutineWidget from '@/components/reviews/PersonalizedRoutineWidget';
+import ShadeSelectionAssistant from '@/components/catalog/ShadeSelectionAssistant';
 import ProductCard from '@/components/catalog/ProductCard';
 import { useCurrency } from '@/context/CurrencyContext';
 import { useCart } from '@/context/CartContext';
@@ -14,12 +15,12 @@ import { getProductById, getRelatedProducts } from '@/services/productService';
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart, toggleWishlist, isInWishlist } = useCart();
+  const { addToCart, toggleWishlist, isInWishlist, requireAuth, error: cartError } = useCart();
   const { formatPrice } = useCurrency();
-
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [productError, setProductError] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [selectedShade, setSelectedShade] = useState(null);
   const [activeTab, setActiveTab] = useState('description');
@@ -31,21 +32,28 @@ export default function ProductDetailPage() {
   useEffect(() => {
     async function loadProduct() {
       setLoading(true);
+      setProductError('');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      const data = await getProductById(id);
-      if (!data) {
-        setProduct(null);
-      } else {
-        setProduct(data);
-        if (data.shades && data.shades.length > 0) {
-          setSelectedShade(data.shades[0]);
+      try {
+        const data = await getProductById(id);
+        if (!data) {
+          setProduct(null);
         } else {
-          setSelectedShade(null);
+          setProduct(data);
+          if (data.shades && data.shades.length > 0) {
+            setSelectedShade(data.shades[0]);
+          } else {
+            setSelectedShade(null);
+          }
+          const related = await getRelatedProducts(data.id);
+          setRelatedProducts(related);
         }
-        const related = await getRelatedProducts(data.id);
-        setRelatedProducts(related);
+      } catch (loadError) {
+        setProduct(null);
+        setProductError(loadError.message || 'Unable to load product details.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     loadProduct();
   }, [id]);
@@ -55,21 +63,27 @@ export default function ProductDetailPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product || product.stock === 0) return;
-    setAdded(true);
-    const itemToAdd = selectedShade ? { ...product, selectedShade: selectedShade.name } : product;
-    addToCart(itemToAdd, quantity);
-    showToast(`🌸 Added ${quantity} × "${product.name}" ${selectedShade ? `(${selectedShade.name})` : ''} to your bag!`);
-    setTimeout(() => setAdded(false), 2000);
+    const shadeName = selectedShade?.name || (typeof selectedShade === 'string' ? selectedShade : null);
+    const addedSuccess = await addToCart(product, quantity, shadeName);
+    if (addedSuccess) {
+      setAdded(true);
+      showToast(`🌸 Added ${quantity} × "${product.name}" ${shadeName ? `(${shadeName})` : ''} to your shopping bag!`);
+      setTimeout(() => setAdded(false), 2000);
+    }
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (!product || product.stock === 0) return;
-    addToCart(product, quantity);
+    if (requireAuth('checkout immediately')) return;
+    const shadeName = selectedShade?.name || (typeof selectedShade === 'string' ? selectedShade : null);
+    const addedSuccess = await addToCart(product, quantity, shadeName);
+    if (!addedSuccess) return;
     showToast(`🛍️ Proceeding to checkout with "${product.name}"...`);
     setTimeout(() => navigate('/checkout'), 800);
   };
+
 
   if (loading) {
     return (
@@ -92,7 +106,7 @@ export default function ProductDetailPage() {
           <div style={{ fontSize: '3.5rem' }}>🍃</div>
           <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: '800', color: 'var(--color-text-primary)' }}>Product Not Found</h2>
           <p style={{ color: 'var(--color-text-secondary)', maxWidth: '400px', textAlign: 'center' }}>
-            The clean beauty formula you are looking for might be out of season or renamed.
+            {productError || 'The clean beauty formula you are looking for might be out of season or renamed.'}
           </p>
           <Link to="/products" className="btn btn-primary btn-pill">
             Explore All Products 🌸
@@ -168,6 +182,7 @@ export default function ProductDetailPage() {
 
       {/* Product Hero Showcase */}
       <main style={{ maxWidth: '1280px', margin: '0 auto', padding: 'var(--space-8) var(--space-10)', width: '100%', boxSizing: 'border-box' }}>
+        {cartError && <p role="alert" style={{ color: 'var(--color-accent-rose)', marginBottom: 'var(--space-4)' }}>{cartError}</p>}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
@@ -272,11 +287,21 @@ export default function ProductDetailPage() {
             {/* AI Skin Compatibility Match Badge */}
             <SkinMatchBadge product={product} initialSkinType={product.skinTypes ? product.skinTypes[0] : 'Dry'} />
 
+            {/* Shade Selection Assistant for Makeup / Cosmetics */}
+            {(product.category === 'makeup' || (product.shades && product.shades.length > 0)) && (
+              <ShadeSelectionAssistant
+                product={product}
+                selectedShade={selectedShade}
+                onSelectShade={(shadeName) => setSelectedShade(shadeName)}
+              />
+            )}
+
             {/* Short Excerpt */}
             <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-base)', lineHeight: 1.6, margin: 0 }}>
               {product.description}
             </p>
 
+<<<<<<< HEAD
             {/* Shade Selection Assistant (For makeup / products with shades) */}
             {product.shades && product.shades.length > 0 && (
               <div style={{
@@ -338,6 +363,8 @@ export default function ProductDetailPage() {
                 </div>
               </div>
             )}
+=======
+>>>>>>> fix/critical-security-data
 
             {/* Actions: Quantity + Add to Bag + Buy Now + Wishlist */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>

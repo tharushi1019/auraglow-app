@@ -5,10 +5,65 @@
  * =============================================================================
  */
 
+const supabase = require('../config/supabaseClient');
+const { resolveProductId } = require('./product.controller');
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function mapDatabaseReview(review) {
+  return {
+    id: review.id,
+    productId: review.product_id,
+    userId: review.user_id,
+    userName: review.users?.name || 'Verified Customer',
+    userAvatar: review.users?.avatar_url || null,
+    skinType: undefined,
+    skinConcern: undefined,
+    rating: Number(review.rating),
+    title: review.title || '',
+    comment: review.comment,
+    verified: Boolean(review.order_id),
+    recommend: undefined,
+    helpfulVotes: 0,
+    votedUsers: [],
+    createdAt: review.created_at,
+  };
+}
+
+function calculateReviewStats(reviews) {
+  const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  let sum = 0;
+
+  reviews.forEach(review => {
+    const rating = Number(review.rating);
+    if (distribution[rating] !== undefined) {
+      distribution[rating]++;
+      sum += rating;
+    }
+  });
+
+  const total = reviews.length;
+  const breakdown = Object.keys(distribution).map(stars => {
+    const count = distribution[stars];
+    return {
+      stars: Number(stars),
+      count,
+      percentage: total ? Math.round((count / total) * 100) : 0,
+    };
+  });
+
+  return {
+    totalReviews: total,
+    averageRating: total ? Number((sum / total).toFixed(1)) : 0,
+    recommendPercentage: null,
+    breakdown,
+  };
+}
+
 let initialReviews = [
   {
     id: 'rev-001',
-    productId: 'prod-001',
+    productId: 'b2000000-0000-0000-0000-000000000001',
     userId: 'usr-1',
     userName: 'Sasha R.',
     userAvatar: 'https://randomuser.me/api/portraits/women/44.jpg',
@@ -25,7 +80,7 @@ let initialReviews = [
   },
   {
     id: 'rev-002',
-    productId: 'prod-001',
+    productId: 'b2000000-0000-0000-0000-000000000001',
     userId: 'usr-2',
     userName: 'Anika P.',
     userAvatar: 'https://randomuser.me/api/portraits/women/68.jpg',
@@ -42,7 +97,7 @@ let initialReviews = [
   },
   {
     id: 'rev-003',
-    productId: 'prod-003',
+    productId: 'b2000000-0000-0000-0000-000000000003',
     userId: 'usr-3',
     userName: 'Leila M.',
     userAvatar: 'https://randomuser.me/api/portraits/women/55.jpg',
@@ -59,7 +114,7 @@ let initialReviews = [
   },
   {
     id: 'rev-004',
-    productId: 'prod-002',
+    productId: 'b2000000-0000-0000-0000-000000000002',
     userId: 'usr-1',
     userName: 'Sasha R.',
     userAvatar: 'https://randomuser.me/api/portraits/women/44.jpg',
@@ -76,7 +131,7 @@ let initialReviews = [
   },
   {
     id: 'rev-005',
-    productId: 'prod-008',
+    productId: 'b2000000-0000-0000-0000-000000000008',
     userId: 'usr-2',
     userName: 'Anika P.',
     userAvatar: 'https://randomuser.me/api/portraits/women/68.jpg',
@@ -93,7 +148,7 @@ let initialReviews = [
   },
   {
     id: 'rev-006',
-    productId: 'prod-005',
+    productId: 'b2000000-0000-0000-0000-000000000005',
     userId: 'usr-3',
     userName: 'Leila M.',
     userAvatar: 'https://randomuser.me/api/portraits/women/55.jpg',
@@ -116,50 +171,39 @@ let initialReviews = [
 exports.getProductReviews = async (req, res, next) => {
   try {
     const { productId } = req.params;
+    const canonicalProductId = resolveProductId(productId);
     const { star, skinType, verifiedOnly, sort = 'recent', page = 1, limit = 10 } = req.query;
 
-    let reviews = initialReviews.filter(r => r.productId === productId);
-
-    // If no reviews found for this specific product, provide sample seeded ones so UI is rich
-    if (reviews.length === 0) {
-      reviews = [
-        {
-          id: `rev-sample-${productId}-1`,
-          productId,
-          userId: 'usr-sample-1',
-          userName: 'Elena V.',
-          userAvatar: 'https://randomuser.me/api/portraits/women/33.jpg',
-          skinType: 'Combination',
-          skinConcern: 'Dullness & Uneven Tone',
-          rating: 5,
-          title: 'Exceeded all my expectations!',
-          comment: 'The quality of clean ingredients is obvious from first application. Lightweight, soothing, and visible improvements in skin radiance.',
-          verified: true,
-          recommend: true,
-          helpfulVotes: 12,
-          votedUsers: [],
-          createdAt: '2026-08-16T10:30:00Z',
-        },
-        {
-          id: `rev-sample-${productId}-2`,
-          productId,
-          userId: 'usr-sample-2',
-          userName: 'Nadia K.',
-          userAvatar: 'https://randomuser.me/api/portraits/women/22.jpg',
-          skinType: 'Dry',
-          skinConcern: 'Dryness & Dehydration',
-          rating: 5,
-          title: 'Holy grail for everyday skincare',
-          comment: 'Locks in deep hydration all day long. Love that it is vegan, cruelty-free, and packaged sustainably.',
-          verified: true,
-          recommend: true,
-          helpfulVotes: 8,
-          votedUsers: [],
-          createdAt: '2026-08-08T12:00:00Z',
-        },
-      ];
+    if (!UUID_REGEX.test(canonicalProductId)) {
+      return res.status(400).json({ success: false, message: 'A valid product ID is required.' });
+    }
+    if (!supabase) {
+      return res.status(503).json({ success: false, message: 'Review database is unavailable.' });
     }
 
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('id')
+      .eq('id', canonicalProductId)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (productError) {
+      return res.status(502).json({ success: false, message: 'Could not verify the product.' });
+    }
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found.' });
+    }
+
+    const { data: databaseReviews, error: reviewError } = await supabase
+      .from('reviews')
+      .select('id, user_id, product_id, order_id, rating, title, comment, created_at, users(name, avatar_url)')
+      .eq('product_id', canonicalProductId)
+      .order('created_at', { ascending: false });
+    if (reviewError) {
+      return res.status(502).json({ success: false, message: 'Could not load product reviews.' });
+    }
+
+    let reviews = (databaseReviews || []).map(mapDatabaseReview);
     // Star filter
     if (star && star !== 'all') {
       reviews = reviews.filter(r => r.rating === parseInt(star, 10));
@@ -193,8 +237,8 @@ exports.getProductReviews = async (req, res, next) => {
     }
 
     const total = reviews.length;
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
     const startIndex = (pageNum - 1) * limitNum;
     const paginated = reviews.slice(startIndex, startIndex + limitNum);
 
@@ -207,7 +251,8 @@ exports.getProductReviews = async (req, res, next) => {
       reviews: paginated,
     });
   } catch (error) {
-    next(error);
+    console.error('[Reviews] Database read failed:', error.message);
+    res.status(502).json({ success: false, message: 'Could not load product reviews.' });
   }
 };
 
@@ -217,47 +262,42 @@ exports.getProductReviews = async (req, res, next) => {
 exports.getReviewStats = async (req, res, next) => {
   try {
     const { productId } = req.params;
-    let reviews = initialReviews.filter(r => r.productId === productId);
-
-    if (reviews.length === 0) {
-      reviews = [
-        { rating: 5, recommend: true },
-        { rating: 5, recommend: true },
-        { rating: 4, recommend: true },
-      ];
+    const canonicalProductId = resolveProductId(productId);
+    if (!UUID_REGEX.test(canonicalProductId)) {
+      return res.status(400).json({ success: false, message: 'A valid product ID is required.' });
+    }
+    if (!supabase) {
+      return res.status(503).json({ success: false, message: 'Review database is unavailable.' });
     }
 
-    const total = reviews.length;
-    const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
-    const average = total > 0 ? (sum / total).toFixed(1) : '5.0';
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('id')
+      .eq('id', canonicalProductId)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (productError) {
+      return res.status(502).json({ success: false, message: 'Could not verify the product.' });
+    }
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found.' });
+    }
 
-    const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-    let recommendCount = 0;
-
-    reviews.forEach(r => {
-      if (distribution[r.rating] !== undefined) distribution[r.rating]++;
-      if (r.recommend) recommendCount++;
-    });
-
-    const breakdown = Object.keys(distribution).reverse().map(stars => {
-      const count = distribution[stars];
-      const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
-      return { stars: Number(stars), count, percentage };
-    });
-
-    const recommendPercentage = total > 0 ? Math.round((recommendCount / total) * 100) : 96;
+    const { data: reviews, error: reviewError } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('product_id', canonicalProductId);
+    if (reviewError) {
+      return res.status(502).json({ success: false, message: 'Could not load review statistics.' });
+    }
 
     res.json({
       success: true,
-      stats: {
-        totalReviews: total,
-        averageRating: Number(average),
-        recommendPercentage,
-        breakdown,
-      },
+      stats: calculateReviewStats(reviews || []),
     });
   } catch (error) {
-    next(error);
+    console.error('[Reviews] Database stats read failed:', error.message);
+    res.status(502).json({ success: false, message: 'Could not load review statistics.' });
   }
 };
 
@@ -266,42 +306,85 @@ exports.getReviewStats = async (req, res, next) => {
  */
 exports.createReview = async (req, res, next) => {
   try {
-    const { productId, rating, title, comment, skinType, skinConcern, recommend = true } = req.body;
+    const { productId, rating, title, comment } = req.body || {};
+    const canonicalProductId = resolveProductId(productId);
+    const numericRating = typeof rating === 'number'
+      ? rating
+      : (typeof rating === 'string' && rating.trim() ? Number(rating) : NaN);
+    const normalizedComment = typeof comment === 'string' ? comment.trim() : '';
+    const normalizedTitle = typeof title === 'string' ? title.trim() : '';
 
-    if (!productId || !rating || !comment || comment.trim().length < 10) {
+    if (!UUID_REGEX.test(canonicalProductId)) {
       return res.status(400).json({
         success: false,
-        message: 'Product ID, valid star rating (1-5), and a review comment (min 10 chars) are required.',
+        message: 'A valid product ID is required.',
+      });
+    }
+    if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) {
+      return res.status(400).json({ success: false, message: 'Rating must be an integer from 1 to 5.' });
+    }
+    if (!normalizedComment || normalizedComment.length < 10 || normalizedTitle.length > 255) {
+      return res.status(400).json({
+        success: false,
+        message: 'A review comment of at least 10 characters and a title of at most 255 characters are required.',
       });
     }
 
-    const newReview = {
-      id: `rev-${Date.now()}`,
-      productId,
-      userId: req.user?.id || 'usr-guest',
-      userName: req.user?.name || 'Verified Customer',
-      userAvatar: req.user?.avatar || 'https://randomuser.me/api/portraits/women/17.jpg',
-      skinType: skinType || 'Normal / Combination',
-      skinConcern: skinConcern || 'General Glow',
-      rating: Number(rating),
-      title: title || 'Loving this product!',
-      comment,
-      verified: true,
-      recommend: Boolean(recommend),
-      helpfulVotes: 0,
-      votedUsers: [],
-      createdAt: new Date().toISOString(),
-    };
+    const authenticatedUserId = req.user?.id;
+    if (!UUID_REGEX.test(authenticatedUserId || '')) {
+      return res.status(401).json({ success: false, message: 'A valid authenticated user is required.' });
+    }
+    if (!supabase) {
+      return res.status(503).json({ success: false, message: 'Review database is unavailable.' });
+    }
 
-    initialReviews.unshift(newReview);
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('id')
+      .eq('id', canonicalProductId)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (productError) {
+      return res.status(502).json({ success: false, message: 'Could not verify the product.' });
+    }
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found.' });
+    }
 
-    res.status(201).json({
+    const { data: insertedReview, error: insertError } = await supabase
+      .from('reviews')
+      .insert([{
+        user_id: authenticatedUserId,
+        product_id: canonicalProductId,
+        rating: numericRating,
+        title: normalizedTitle || null,
+        comment: normalizedComment,
+      }])
+      .select('id, user_id, product_id, order_id, rating, title, comment, created_at, users(name, avatar_url)')
+      .single();
+
+    if (insertError) {
+      if (insertError.code === '23505') {
+        return res.status(409).json({ success: false, message: 'You have already reviewed this product.' });
+      }
+      if (insertError.code === '23503') {
+        return res.status(409).json({ success: false, message: 'The product or authenticated user no longer exists.' });
+      }
+      console.error('[Reviews] Database insert failed:', insertError.message);
+      return res.status(502).json({ success: false, message: 'Review could not be saved.' });
+    }
+    if (!insertedReview) {
+      return res.status(502).json({ success: false, message: 'Review was not returned after database insertion.' });
+    }
+
+    return res.status(201).json({
       success: true,
       message: 'Review submitted successfully 🌸',
-      review: newReview,
+      review: mapDatabaseReview(insertedReview),
     });
   } catch (error) {
-    next(error);
+    console.error('[Reviews] Database insert failed:', error.message);
+    return res.status(502).json({ success: false, message: 'Review could not be saved.' });
   }
 };
 

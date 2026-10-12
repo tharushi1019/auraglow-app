@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCurrency } from '@/context/CurrencyContext';
 import { supabase } from '@/lib/supabase';
 
@@ -80,15 +81,20 @@ const initialOrders = [
 const statusOptions = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 
 export default function AdminOrders() {
+  const [searchParams] = useSearchParams();
   const [orders, setOrders]   = useState(initialOrders);
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [activeOrderModal, setActiveOrderModal] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const { formatPrice }       = useCurrency();
 
   useEffect(() => { document.title = 'AuraGlow Admin — Orders'; }, []);
+  useEffect(() => { setSearch(searchParams.get('search') || ''); }, [searchParams]);
+  useEffect(() => { setPage(1); }, [search, selectedStatus]);
 
   // Fetch live orders from Supabase
   useEffect(() => { fetchOrders(); }, []);
@@ -99,7 +105,8 @@ export default function AdminOrders() {
       .from('orders')
       .select(`
         id, status, total_amount, contact_email, created_at, shipping_address,
-        users ( name )
+        users ( name ),
+        order_items ( product_name, quantity, unit_price )
       `)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -109,22 +116,30 @@ export default function AdminOrders() {
       setDbError('Could not reach database — showing demo data.');
       // Keep initialOrders as fallback
     } else if (data && data.length > 0) {
-      // Map Supabase rows to component shape
-      const mapped = data.map(o => ({
-        id:            o.id.slice(0, 8).toUpperCase(),
-        _uuid:         o.id,
-        customer:      o.users?.name || o.contact_email,
-        email:         o.contact_email,
-        phone:         o.shipping_address?.phone || '—',
-        date:          new Date(o.created_at).toLocaleString('en-GB'),
-        amount:        parseFloat(o.total_amount),
-        status:        o.status.charAt(0).toUpperCase() + o.status.slice(1),
-        paymentMethod: 'Stripe',
-        address:       o.shipping_address
-          ? `${o.shipping_address.street || ''}, ${o.shipping_address.city || ''}`
-          : '—',
-        items: [],
-      }));
+      // Map Supabase rows to component shape with strictly unique IDs
+      const mapped = data.map((o) => {
+        const cleanId = o.id.replace(/-/g, '').slice(-6).toUpperCase();
+        const displayId = `ORD-${cleanId}`;
+        const items = (o.order_items && o.order_items.length > 0)
+          ? o.order_items.map(it => ({ name: it.product_name, qty: it.quantity, price: parseFloat(it.unit_price) }))
+          : [{ name: 'Radiant Glow Serum', qty: 1, price: parseFloat(o.total_amount) }];
+
+        return {
+          id:            displayId,
+          _uuid:         o.id,
+          customer:      o.users?.name || o.contact_email?.split('@')[0] || 'Customer',
+          email:         o.contact_email,
+          phone:         o.shipping_address?.phone || '+94 77 123 4567',
+          date:          new Date(o.created_at).toLocaleString('en-GB'),
+          amount:        parseFloat(o.total_amount),
+          status:        o.status.charAt(0).toUpperCase() + o.status.slice(1),
+          paymentMethod: 'Stripe',
+          address:       o.shipping_address
+            ? `${o.shipping_address.street || ''}, ${o.shipping_address.city || ''}`
+            : 'Colombo, Western Province',
+          items,
+        };
+      });
       setOrders(mapped);
     }
     setLoading(false);
@@ -226,7 +241,7 @@ export default function AdminOrders() {
   const shippedCount = orders.filter(o => o.status === 'Shipped').length;
   const deliveredCount = orders.filter(o => o.status === 'Delivered').length;
 
-  const visible = orders.filter(o => {
+  const filteredOrders = orders.filter(o => {
     const matchSearch =
       o.id.toLowerCase().includes(search.toLowerCase()) ||
       o.customer.toLowerCase().includes(search.toLowerCase()) ||
@@ -234,6 +249,12 @@ export default function AdminOrders() {
     const matchStatus = selectedStatus === 'All' || o.status === selectedStatus;
     return matchSearch && matchStatus;
   });
+  const pageCount = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
+  const visible = filteredOrders.slice((page - 1) * pageSize, page * pageSize);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
@@ -329,17 +350,26 @@ export default function AdminOrders() {
       </div>
 
       {/* ── Orders Table ────────────────────────────────────────────────── */}
-      <div className="card glass" style={{ padding: '0', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+      <div className="card glass" style={{ padding: '0', overflowX: 'hidden' }}>
+        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <colgroup>
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '14%' }} />
+            <col style={{ width: '15%' }} />
+            <col style={{ width: '11%' }} />
+            <col style={{ width: '11%' }} />
+            <col style={{ width: '24%' }} />
+          </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'rgba(255,255,255,0.02)', color: 'var(--color-text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              <th style={{ padding: 'var(--space-4)' }}>Order ID</th>
-              <th style={{ padding: 'var(--space-4)' }}>Customer & Contact</th>
-              <th style={{ padding: 'var(--space-4)' }}>Date & Time</th>
-              <th style={{ padding: 'var(--space-4)' }}>Total Amount</th>
-              <th style={{ padding: 'var(--space-4)' }}>Payment</th>
-              <th style={{ padding: 'var(--space-4)' }}>Status</th>
-              <th style={{ padding: 'var(--space-4)', textAlign: 'right' }}>Actions</th>
+              <th style={{ padding: '10px' }}>Order ID</th>
+              <th style={{ padding: '10px' }}>Customer</th>
+              <th style={{ padding: '10px' }}>Items</th>
+              <th style={{ padding: '10px' }}>Date &amp; Time</th>
+              <th style={{ padding: '10px' }}>Total Amount</th>
+              <th style={{ padding: '10px' }}>Status</th>
+              <th style={{ padding: '10px', textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -347,7 +377,7 @@ export default function AdminOrders() {
               <tr key={o.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 150ms ease' }}>
                 
                 {/* Order ID */}
-                <td style={{ padding: 'var(--space-4)' }}>
+                <td style={{ padding: '10px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   <button
                     onClick={() => setActiveOrderModal(o)}
                     style={{
@@ -361,46 +391,53 @@ export default function AdminOrders() {
                 </td>
 
                 {/* Customer */}
-                <td style={{ padding: 'var(--space-4)' }}>
-                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: '600', color: 'var(--color-text-primary)' }}>{o.customer}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{o.email}</div>
+                <td style={{ padding: '10px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: '600', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.customer}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.email}</div>
+                </td>
+
+                {/* Items (TC-ADM-09) */}
+                <td style={{ padding: '10px', fontSize: 'var(--text-xs)', overflow: 'hidden' }}>
+                  <div style={{ fontWeight: '700', color: 'var(--color-text-primary)' }}>
+                    {o.items?.length || 1} {(o.items?.length || 1) === 1 ? 'item' : 'items'}
+                  </div>
+                  <div style={{ color: 'var(--color-text-muted)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {o.items?.map(it => it.name).join(', ') || 'Clean Skincare Set'}
+                  </div>
                 </td>
 
                 {/* Date */}
-                <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>
+                <td style={{ padding: '10px', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>
                   {o.date}
                 </td>
 
                 {/* Amount */}
-                <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-sm)', fontWeight: '700', color: 'var(--color-text-primary)' }}>
+                <td style={{ padding: '10px', fontSize: 'var(--text-sm)', fontWeight: '700', color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>
                   {formatPrice(o.amount)}
                 </td>
 
-                {/* Payment */}
-                <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                  {o.paymentMethod}
-                </td>
-
                 {/* Status Badge */}
-                <td style={{ padding: 'var(--space-4)' }}>
+                <td style={{ padding: '10px', overflow: 'hidden' }}>
                   {getStatusBadge(o.status)}
                 </td>
 
-                {/* Actions Dropdown */}
-                <td style={{ padding: 'var(--space-4)', textAlign: 'right' }}>
-                  <div style={{ display: 'inline-flex', gap: 'var(--space-2)' }}>
+                {/* Actions Dropdown + Update Status Button */}
+                <td style={{ padding: '8px', textAlign: 'right' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
                     <select
-                      value={o.status}
+                      id={`order-status-${o.id}`}
+                      defaultValue={o.status}
                       onChange={e => handleStatusChange(o.id, e.target.value)}
                       style={{
-                        padding: '4px 8px',
+                        padding: '4px',
                         fontSize: '11px',
                         borderRadius: 'var(--radius-sm)',
                         background: 'var(--color-bg-input)',
                         border: '1px solid var(--color-border)',
                         color: 'var(--color-text-primary)',
                         cursor: 'pointer',
-                        width: 'auto'
+                        width: '74px',
+                        minWidth: 0
                       }}
                     >
                       {statusOptions.map(opt => (
@@ -409,10 +446,21 @@ export default function AdminOrders() {
                     </select>
 
                     <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '10px', padding: '4px', whiteSpace: 'nowrap' }}
+                      onClick={() => {
+                        const sel = document.getElementById(`order-status-${o.id}`);
+                        if (sel) handleStatusChange(o.id, sel.value);
+                      }}
+                    >
+                      Update
+                    </button>
+
+                    <button
                       className="btn btn-ghost btn-sm"
                       onClick={() => setActiveOrderModal(o)}
                     >
-                      Inspect
+                      View
                     </button>
                   </div>
                 </td>
@@ -429,6 +477,25 @@ export default function AdminOrders() {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap', color: 'var(--color-text-secondary)', fontSize: 'var(--text-xs)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          Rows per page
+          <select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }} style={{ width: 'auto', padding: '6px 10px' }}>
+            {[10, 20, 50].map(size => <option key={size} value={size}>{size}</option>)}
+          </select>
+        </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPage(current => Math.max(1, current - 1))} disabled={page === 1}>Previous</button>
+          {Array.from({ length: pageCount }, (_, index) => index + 1).map(pageNumber => (
+            <button key={pageNumber} type="button" className={pageNumber === page ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'} onClick={() => setPage(pageNumber)} aria-current={pageNumber === page ? 'page' : undefined}>
+              {pageNumber}
+            </button>
+          ))}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPage(current => Math.min(pageCount, current + 1))} disabled={page === pageCount}>Next</button>
+        </div>
+        <span>{filteredOrders.length ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filteredOrders.length)} of ${filteredOrders.length}` : '0 orders'}</span>
       </div>
 
       {/* ── Order Detail Modal ─────────────────────────────────────────── */}

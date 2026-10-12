@@ -8,6 +8,7 @@ export default function ReviewsSection({ productId, productName = 'Product' }) {
   const [reviews, setReviews] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   // Filter & Sort State
   const [starFilter, setStarFilter] = useState('all');
@@ -23,19 +24,27 @@ export default function ReviewsSection({ productId, productName = 'Product' }) {
   useEffect(() => {
     async function loadReviewsData() {
       setLoading(true);
-      const [revData, statsData] = await Promise.all([
-        getProductReviews(productId, {
-          star: starFilter,
-          skinType: skinTypeFilter,
-          verifiedOnly,
-          sort: sortBy,
-        }),
-        getReviewStats(productId),
-      ]);
+      setLoadError('');
+      try {
+        const [revData, statsData] = await Promise.all([
+          getProductReviews(productId, {
+            star: starFilter,
+            skinType: skinTypeFilter,
+            verifiedOnly,
+            sort: sortBy,
+          }),
+          getReviewStats(productId),
+        ]);
 
-      setReviews(revData.reviews || []);
-      setStats(statsData);
-      setLoading(false);
+        setReviews(revData.reviews || []);
+        setStats(statsData);
+      } catch (error) {
+        setReviews([]);
+        setStats(null);
+        setLoadError(error.message || 'Could not load reviews.');
+      } finally {
+        setLoading(false);
+      }
     }
 
     loadReviewsData();
@@ -44,8 +53,7 @@ export default function ReviewsSection({ productId, productName = 'Product' }) {
   const handleReviewSubmit = async (formData) => {
     const newRev = await submitReview(formData);
     setReviews(prev => [newRev, ...prev]);
-    // Refresh stats
-    const updatedStats = await getReviewStats(productId);
+    const updatedStats = await getReviewStats(productId).catch(() => null);
     setStats(updatedStats);
   };
 
@@ -189,6 +197,10 @@ export default function ReviewsSection({ productId, productName = 'Product' }) {
       {loading ? (
         <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>
           Loading community reviews...
+        </div>
+      ) : loadError ? (
+        <div role="alert" style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>
+          {loadError}
         </div>
       ) : filteredReviews.length === 0 ? (
         <div style={{

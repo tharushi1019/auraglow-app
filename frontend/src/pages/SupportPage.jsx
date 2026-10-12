@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { sendSupportEmail } from '@/services/emailjsService';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
@@ -49,12 +50,28 @@ export default function SupportPage() {
     item.a.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    try {
+      // 1. Send via EmailJS (Frontend SDK taught by lecturer)
+      await sendSupportEmail(form);
+
+      // 2. Also log to backend API
+      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+      await fetch(`${apiBase}/support`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+    } catch {
+      // Fallback UI
+    }
     setSubmitted(true);
     setForm({ name: '', email: '', subject: '', message: '' });
     setTimeout(() => setSubmitted(false), 5000);
   };
+
+
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-primary)' }}>
@@ -82,10 +99,10 @@ export default function SupportPage() {
           {/* Quick action cards */}
           <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'center', flexWrap: 'wrap' }}>
             {[
-              { icon: '📍', label: 'Track Order', desc: 'Check your delivery status', link: '/orders/demo' },
-              { icon: '🔄', label: 'Returns', desc: 'Start a return or exchange', link: '#contact' },
-              { icon: '💳', label: 'Billing', desc: 'Payment & invoice queries', link: '#contact' },
-            ].map(card => (
+              { icon: '📍', label: 'Track Order', desc: 'Check your delivery status', link: '/orders' },
+              { icon: '🔄', label: 'Returns', desc: 'Start a return or exchange', action: () => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }) },
+              { icon: '💳', label: 'Billing', desc: 'Payment & invoice queries', action: () => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }) },
+            ].map(card => card.link ? (
               <Link
                 key={card.label}
                 to={card.link}
@@ -107,11 +124,34 @@ export default function SupportPage() {
                 <p style={{ fontSize: 'var(--text-sm)', fontWeight: '700', color: 'var(--color-text-primary)', margin: '0 0 4px 0' }}>{card.label}</p>
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0 }}>{card.desc}</p>
               </Link>
+            ) : (
+              <div
+                key={card.label}
+                onClick={card.action}
+                style={{
+                  background: 'var(--color-bg-card)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-xl)',
+                  padding: 'var(--space-5) var(--space-6)',
+                  textDecoration: 'none',
+                  minWidth: '160px',
+                  textAlign: 'center',
+                  transition: 'all var(--transition-base)',
+                  display: 'block',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-accent-rose)'; e.currentTarget.style.transform = 'translateY(-3px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+              >
+                <div style={{ fontSize: '28px', marginBottom: '6px' }}>{card.icon}</div>
+                <p style={{ fontSize: 'var(--text-sm)', fontWeight: '700', color: 'var(--color-text-primary)', margin: '0 0 4px 0' }}>{card.label}</p>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0 }}>{card.desc}</p>
+              </div>
             ))}
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-8)', alignItems: 'start' }}>
+        <div className="support-layout-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-8)', alignItems: 'start' }}>
 
           {/* Left: FAQ */}
           <div>

@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-// Change this if your backend runs on a different port
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const rawUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const normalizedUrl = rawUrl.replace(/\/+$/, '');
+const API_BASE_URL = normalizedUrl.endsWith('/api/v1') ? normalizedUrl : `${normalizedUrl}/api/v1`;
 
 const client = axios.create({ baseURL: API_BASE_URL });
 
@@ -27,8 +28,8 @@ export async function fetchMyProfile() {
   return data;
 }
 
-export async function submitSkinQuiz({ skinType, concerns, allergens }) {
-  const { data } = await client.post('/auth/skin-quiz', { skinType, concerns, allergens });
+export async function submitSkinQuiz(quizData) {
+  const { data } = await client.post('/auth/skin-quiz', quizData);
   return data;
 }
 

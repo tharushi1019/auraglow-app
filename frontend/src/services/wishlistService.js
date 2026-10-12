@@ -1,44 +1,36 @@
-/**
- * =============================================================================
- *  AuraGlow — Wishlist Service (frontend/src/services/wishlistService.js)
- *  Module 3: Shopping Cart & Wishlist (Achani)
- * =============================================================================
- */
+import client from '@/api/authApi';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
+function requireToken() {
+  const token = localStorage.getItem('auraglow_token');
+  if (!token) throw new Error('Sign in is required to access your wishlist.');
+  return token;
+}
+
+function getItems(data) {
+  if (!data?.success || !Array.isArray(data.items)) {
+    throw new Error(data?.message || 'The wishlist response was invalid.');
+  }
+  return data.items;
+}
+
+function authConfig() {
+  return { headers: { Authorization: `Bearer ${requireToken()}` } };
+}
 
 export async function fetchWishlist() {
   try {
-    const res = await fetch(`${API_BASE}/wishlist`);
-    if (!res.ok) throw new Error('API failed');
-    const data = await res.json();
-    return data.items || []; // list of product IDs
-  } catch {
-    const local = localStorage.getItem('auraglow_wishlist');
-    return local ? JSON.parse(local) : [];
+    const { data } = await client.get('/wishlist', authConfig());
+    return getItems(data);
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.message || 'Unable to load wishlist.');
   }
 }
 
 export async function toggleWishlistBackend(productId) {
   try {
-    const res = await fetch(`${API_BASE}/wishlist/toggle`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productId }),
-    });
-    if (!res.ok) throw new Error('API failed');
-    const data = await res.json();
-    return data.items;
-  } catch {
-    const local = localStorage.getItem('auraglow_wishlist');
-    let items = local ? JSON.parse(local) : [];
-    const index = items.indexOf(productId);
-    if (index > -1) {
-      items.splice(index, 1);
-    } else {
-      items.push(productId);
-    }
-    localStorage.setItem('auraglow_wishlist', JSON.stringify(items));
-    return items;
+    const { data } = await client.post('/wishlist/toggle', { productId }, authConfig());
+    return getItems(data);
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.message || 'Unable to update wishlist.');
   }
 }

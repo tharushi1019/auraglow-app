@@ -5,10 +5,40 @@
  * =============================================================================
  */
 
+const supabase = require('../config/supabaseClient');
+
+const LEGACY_PRODUCT_ID_MAP = {
+  'prod-001': 'b2000000-0000-0000-0000-000000000001',
+  'prod-002': 'b2000000-0000-0000-0000-000000000002',
+  'prod-003': 'b2000000-0000-0000-0000-000000000003',
+  'prod-004': 'b2000000-0000-0000-0000-000000000004',
+  'prod-005': 'b2000000-0000-0000-0000-000000000005',
+  'prod-006': 'b2000000-0000-0000-0000-000000000006',
+  'prod-007': 'b2000000-0000-0000-0000-000000000007',
+  'prod-008': 'b2000000-0000-0000-0000-000000000008',
+};
+
+function resolveProductId(id) {
+  if (!id || typeof id !== 'string') return id;
+  const trimmed = id.trim();
+  if (!trimmed) return trimmed;
+  const legacyMatch = LEGACY_PRODUCT_ID_MAP[trimmed.toLowerCase()];
+  if (legacyMatch) return legacyMatch;
+  return trimmed;
+}
+
+function normalizeProductRecord(product) {
+  if (!product || !product.id) return product;
+  return {
+    ...product,
+    id: resolveProductId(product.id),
+  };
+}
+
 // Fallback seed / mock data in case Supabase client is not configured
 const initialProducts = [
   {
-    id: 'prod-001',
+    id: 'b2000000-0000-0000-0000-000000000001',
     name: 'Radiant Glow Serum',
     brand: 'AuraGlow',
     category: 'skincare',
@@ -34,7 +64,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-002',
+    id: 'b2000000-0000-0000-0000-000000000002',
     name: 'Velvet Matte Lipstick',
     brand: 'AuraGlow',
     category: 'makeup',
@@ -59,7 +89,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-003',
+    id: 'b2000000-0000-0000-0000-000000000003',
     name: 'Petal Hydra Cream',
     brand: 'AuraGlow',
     category: 'skincare',
@@ -84,7 +114,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-004',
+    id: 'b2000000-0000-0000-0000-000000000004',
     name: 'Rose Gold Eye Palette',
     brand: 'AuraGlow',
     category: 'makeup',
@@ -109,7 +139,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-005',
+    id: 'b2000000-0000-0000-0000-000000000005',
     name: 'Green Tea Cleansing Foam',
     brand: 'AuraGlow',
     category: 'skincare',
@@ -133,7 +163,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-006',
+    id: 'b2000000-0000-0000-0000-000000000006',
     name: 'Midnight Bloom Perfume',
     brand: 'AuraGlow',
     category: 'fragrance',
@@ -157,7 +187,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-007',
+    id: 'b2000000-0000-0000-0000-000000000007',
     name: 'Pro Blending Brush Set',
     brand: 'AuraGlow',
     category: 'tools',
@@ -181,7 +211,7 @@ const initialProducts = [
     ],
   },
   {
-    id: 'prod-008',
+    id: 'b2000000-0000-0000-0000-000000000008',
     name: 'SPF 50 Sunscreen Fluid',
     brand: 'AuraGlow',
     category: 'skincare',
@@ -219,7 +249,41 @@ const categoriesData = [
  */
 exports.getProducts = async (req, res, next) => {
   try {
-    let result = [...initialProducts];
+    // ── Try to fetch live products from Supabase first ──────────────────────
+    let result = [];
+    const { data: dbProducts, error: dbErr } = await supabase
+      .from('products')
+      .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description, clean_beauty_tags, shades')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (dbErr) {
+      console.error('[Products] Catalog query failed:', dbErr.message);
+      return res.status(503).json({ success: false, message: 'The product catalog is temporarily unavailable.' });
+    }
+    result = (dbProducts || []).map(p => ({
+      id: p.id,
+      name: p.name || '',
+      brand: p.brand || 'AuraGlow',
+      category: (p.category || 'skincare').toLowerCase(),
+      price: parseFloat(p.price) || 0,
+      oldPrice: null,
+      stock: p.stock_quantity ?? 0,
+      rating: 4.7,
+      reviewCount: 100,
+      isVegan: p.is_vegan ?? false,
+      isCrueltyFree: p.is_cruelty_free ?? true,
+      tags: Array.isArray(p.clean_beauty_tags) ? p.clean_beauty_tags : [],
+      shades: Array.isArray(p.shades) ? p.shades : [],
+      badge: p.is_vegan ? '🌱 Vegan' : '🐰 Cruelty-Free',
+      badgeClass: p.is_vegan ? 'badge-vegan' : 'badge-cruelty-free',
+      description: p.description || '',
+      ingredients: [],
+      image: (Array.isArray(p.images) && p.images.length > 0)
+        ? p.images[0]
+        : 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=500&q=80',
+      imageGallery: Array.isArray(p.images) ? p.images : [],
+    }));
     const {
       search,
       category,
@@ -315,23 +379,54 @@ exports.getProducts = async (req, res, next) => {
 exports.getProductById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const product = initialProducts.find(p => p.id === id || p.id.toLowerCase() === id.toLowerCase());
+    const canonicalId = resolveProductId(id);
 
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: `Product with ID '${id}' not found`,
-      });
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canonicalId);
+    if (isUuid) {
+      const { data: dbProduct, error: dbError } = await supabase
+        .from('products')
+        .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description, clean_beauty_tags, shades')
+        .eq('id', canonicalId)
+        .maybeSingle();
+      if (dbError) {
+        console.error('[ProductById] Product lookup failed:', dbError.message);
+        return res.status(503).json({ success: false, message: 'Product details are temporarily unavailable.' });
+      }
+      if (dbProduct) {
+        return res.json({
+          success: true,
+          product: {
+            id: dbProduct.id,
+            name: dbProduct.name || '',
+            brand: dbProduct.brand || 'AuraGlow',
+            category: (dbProduct.category || 'skincare').toLowerCase(),
+            price: parseFloat(dbProduct.price) || 0,
+            stock: dbProduct.stock_quantity ?? 0,
+            isVegan: dbProduct.is_vegan ?? false,
+            isCrueltyFree: dbProduct.is_cruelty_free ?? true,
+            tags: Array.isArray(dbProduct.clean_beauty_tags) ? dbProduct.clean_beauty_tags : [],
+            shades: Array.isArray(dbProduct.shades) ? dbProduct.shades : [],
+            description: dbProduct.description || '',
+            ingredients: [],
+            image: (Array.isArray(dbProduct.images) && dbProduct.images.length > 0)
+              ? dbProduct.images[0]
+              : 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=500&q=80',
+            imageGallery: Array.isArray(dbProduct.images) ? dbProduct.images : [],
+          },
+        });
+      }
     }
 
-    res.json({
-      success: true,
-      product,
+    return res.status(404).json({
+      success: false,
+      message: `Product with ID '${id}' not found`,
     });
   } catch (error) {
     next(error);
   }
 };
+
+exports.resolveProductId = resolveProductId;
 
 /**
  * GET /api/v1/products/categories
@@ -373,7 +468,8 @@ exports.getFeaturedProducts = async (req, res, next) => {
 exports.getRelatedProducts = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const product = initialProducts.find(p => p.id === id);
+    const canonicalId = resolveProductId(id);
+    const product = initialProducts.find(p => resolveProductId(p.id) === canonicalId || p.id.toLowerCase() === canonicalId.toLowerCase());
 
     let related = [];
     if (product) {
@@ -394,3 +490,5 @@ exports.getRelatedProducts = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.initialProducts = initialProducts;

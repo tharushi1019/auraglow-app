@@ -1,41 +1,55 @@
-/**
- * =============================================================================
- *  AuraGlow — Cart Service (frontend/src/services/cartService.js)
- *  Module 3: Shopping Cart & Wishlist (Achani)
- * =============================================================================
- */
+import client from '@/api/authApi';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
+function requireToken() {
+  const token = localStorage.getItem('auraglow_token');
+  if (!token) throw new Error('Sign in is required to access your cart.');
+  return token;
+}
+
+function getItems(data) {
+  if (!data?.success || !Array.isArray(data.items)) {
+    throw new Error(data?.message || 'The cart response was invalid.');
+  }
+  return data.items;
+}
+
+function authConfig() {
+  return { headers: { Authorization: `Bearer ${requireToken()}` } };
+}
 
 export async function fetchCart() {
   try {
-    const res = await fetch(`${API_BASE}/cart`);
-    if (!res.ok) throw new Error('API failed');
-    const data = await res.json();
-    return data.items || [];
-  } catch {
-    const local = localStorage.getItem('auraglow_cart');
-    return local ? JSON.parse(local) : [];
+    const { data } = await client.get('/cart', authConfig());
+    return getItems(data);
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.message || 'Unable to load cart.');
   }
 }
 
-export async function syncCart(cartItems) {
+export async function addCartItem({ productId, quantity, selectedShade = null }) {
   try {
-    localStorage.setItem('auraglow_cart', JSON.stringify(cartItems));
-    // Attempt backend sync
-    await fetch(`${API_BASE}/cart/clear`, { method: 'POST' });
-    for (const item of cartItems) {
-      await fetch(`${API_BASE}/cart`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: item.productId || item.id,
-          quantity: item.quantity,
-          price: item.price,
-        }),
-      });
-    }
-  } catch (err) {
-    console.warn('API cart sync offline, saved locally.', err.message);
+    const { data } = await client.post('/cart', { productId, quantity, selectedShade }, authConfig());
+    return getItems(data);
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.message || 'Unable to update cart.');
+  }
+}
+
+export async function removeCartItem(productId, selectedShade = null) {
+  try {
+    const params = selectedShade ? { selectedShade } : {};
+    const { data } = await client.delete(`/cart/${encodeURIComponent(productId)}`, { ...authConfig(), params });
+    return getItems(data);
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.message || 'Unable to remove cart item.');
+  }
+}
+
+export async function clearCart() {
+  try {
+    const { data } = await client.post('/cart/clear', {}, authConfig());
+    return getItems(data);
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.message || 'Unable to clear cart.');
   }
 }

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
 import { useCart } from '@/context/CartContext';
 import { useCurrency } from '@/context/CurrencyContext';
 
 export default function CartPage() {
-  const { cart, removeFromCart, updateQuantity, clearCart } = useCart();
+  const navigate = useNavigate();
+  const { cart, removeFromCart, updateQuantity, clearCart, requireAuth, error, loading } = useCart();
   const { formatPrice } = useCurrency();
   const [promoCode, setPromoCode] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -59,7 +60,11 @@ export default function CartPage() {
           Your Shopping Bag 🛍️
         </h1>
 
-        {cart.length === 0 ? (
+        {error && <p role="alert" style={{ color: 'var(--color-accent-rose)', marginBottom: 'var(--space-4)' }}>{error}</p>}
+
+        {loading ? (
+          <p role="status" style={{ color: 'var(--color-text-secondary)' }}>Loading your shopping bag...</p>
+        ) : cart.length === 0 ? (
           <div style={{
             background: 'var(--color-bg-card)',
             border: '1px solid var(--color-border)',
@@ -81,7 +86,7 @@ export default function CartPage() {
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-8)', alignItems: 'start' }}>
+          <div className="cart-layout-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-8)', alignItems: 'start' }}>
             
             {/* Left: Cart Items List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -89,7 +94,7 @@ export default function CartPage() {
                 const prod = item.product;
                 return (
                   <div
-                    key={item.id}
+                    key={item.cartItemId || `${item.id}-${item.selectedShade || 'default'}`}
                     className="card-hover-glow"
                     style={{
                       background: 'var(--color-bg-card)',
@@ -115,6 +120,7 @@ export default function CartPage() {
                       <Link to={`/products/${item.id}`} style={{ fontSize: 'var(--text-base)', fontWeight: '700', color: 'var(--color-text-primary)', textDecoration: 'none' }}>
                         {prod.name}
                       </Link>
+                      {item.selectedShade && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Shade: {item.selectedShade}</span>}
                       <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
                         Unit: {formatPrice(prod.price)}
                       </span>
@@ -132,7 +138,7 @@ export default function CartPage() {
                       {/* Qty edit */}
                       <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-full)', padding: '2px 6px', background: 'var(--color-bg-secondary)' }}>
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedShade)}
                           disabled={item.quantity <= 1}
                           style={{ background: 'none', border: 'none', color: 'var(--color-text-primary)', cursor: 'pointer', padding: '2px 6px', fontSize: '13px' }}
                         >
@@ -142,7 +148,7 @@ export default function CartPage() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedShade)}
                           disabled={item.quantity >= (prod.stock || 10)}
                           style={{ background: 'none', border: 'none', color: 'var(--color-text-primary)', cursor: 'pointer', padding: '2px 6px', fontSize: '13px' }}
                         >
@@ -159,7 +165,7 @@ export default function CartPage() {
 
                       {/* Remove Button */}
                       <button
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item.id, item.selectedShade)}
                         style={{ background: 'none', border: 'none', color: 'var(--color-accent-rose)', cursor: 'pointer', fontSize: '16px', padding: 0 }}
                         title="Remove item"
                       >
@@ -257,13 +263,17 @@ export default function CartPage() {
                   <span style={{ color: 'var(--color-accent-rose)' }}>{formatPrice(total)}</span>
                 </div>
 
-                <Link
-                  to="/checkout"
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (requireAuth('proceed to checkout and place your order')) return;
+                    navigate('/checkout');
+                  }}
                   className="btn btn-primary btn-pill"
-                  style={{ textDecoration: 'none', textAlign: 'center', display: 'block', padding: '12px 24px', fontWeight: '700', fontSize: 'var(--text-sm)', marginTop: 'var(--space-2)' }}
+                  style={{ width: '100%', textAlign: 'center', display: 'block', padding: '12px 24px', fontWeight: '700', fontSize: 'var(--text-sm)', marginTop: 'var(--space-2)', cursor: 'pointer', border: 'none' }}
                 >
                   Proceed to Checkout 🔒
-                </Link>
+                </button>
 
                 {shipping > 0 && (
                   <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', textAlign: 'center', margin: 0 }}>

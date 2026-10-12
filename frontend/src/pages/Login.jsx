@@ -22,9 +22,25 @@ export default function Login() {
     try {
       const data = await loginUser(form);
       loginSuccess(data);
-      navigate('/profile');
+
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectPath = searchParams.get('redirect');
+
+      if (data.user?.role === 'admin') {
+        navigate('/admin');
+      } else if (redirectPath) {
+        navigate(redirectPath);
+      } else {
+        navigate('/profile');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password.');
+      if (!err.response) {
+        setError('Unable to reach the AuraGlow API. Check that the backend is running and try again.');
+      } else if (err.response.status >= 500) {
+        setError(err.response.data?.message || 'The login service is temporarily unavailable. Please try again.');
+      } else {
+        setError(err.response.data?.message || 'Invalid email or password.');
+      }
     } finally {
       setLoading(false);
     }
@@ -64,8 +80,15 @@ export default function Login() {
                 required
               />
             </div>
-            <button className="btn btn-primary" type="submit" disabled={loading}>
-              {loading ? <span className="spinner" /> : 'Log In'}
+            <button className="btn btn-primary" type="submit" disabled={loading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              {loading ? (
+                <>
+                  <span className="spinner" />
+                  <span>Logging in...</span>
+                </>
+              ) : (
+                'Log In'
+              )}
             </button>
           </form>
           <p className="form-footer-text">

@@ -6,8 +6,10 @@ import ProductCard from '@/components/catalog/ProductCard';
 import ProductFilterSidebar from '@/components/catalog/ProductFilterSidebar';
 import ProductQuickViewModal from '@/components/catalog/ProductQuickViewModal';
 import { getProducts, getCategories } from '@/services/productService';
+import { useCart } from '@/context/CartContext';
 
 export default function CatalogPage() {
+  const { addToCart, error: cartError } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // URL state
@@ -18,6 +20,7 @@ export default function CatalogPage() {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState('');
 
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
@@ -59,18 +62,25 @@ export default function CatalogPage() {
   useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const res = await getProducts({
-        category: selectedCategory,
-        search: searchTerm,
-        sort: sortBy,
-        minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
-        maxPrice: priceRange[1] < 20000 ? priceRange[1] : undefined,
-        isVegan: filters.isVegan,
-        isCrueltyFree: filters.isCrueltyFree,
-        inStock: filters.inStock,
-      });
-      setProducts(res.products || []);
-      setLoading(false);
+      setCatalogError('');
+      try {
+        const res = await getProducts({
+          category: selectedCategory,
+          search: searchTerm,
+          sort: sortBy,
+          minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
+          maxPrice: priceRange[1] < 20000 ? priceRange[1] : undefined,
+          isVegan: filters.isVegan,
+          isCrueltyFree: filters.isCrueltyFree,
+          inStock: filters.inStock,
+        });
+        setProducts(res.products || []);
+      } catch (loadError) {
+        setProducts([]);
+        setCatalogError(loadError.message || 'Unable to load products.');
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [selectedCategory, searchTerm, sortBy, priceRange, filters]);
@@ -117,8 +127,11 @@ export default function CatalogPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleAddToCart = (product) => {
-    showToast(`🌸 Added "${product.name}" to your shopping bag!`);
+  const handleAddToCart = async (product) => {
+    const success = await addToCart(product, product.qty || 1);
+    if (success) {
+      showToast(`🌸 Added "${product.name}" to your shopping bag!`);
+    }
   };
 
   // Active filters list for chip display
@@ -268,7 +281,12 @@ export default function CatalogPage() {
 
       {/* Main Catalog Body */}
       <main style={{ maxWidth: '1280px', margin: '0 auto', padding: 'var(--space-8) var(--space-10)', width: '100%', boxSizing: 'border-box' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 'var(--space-8)', alignItems: 'start' }}>
+        {(catalogError || cartError) && (
+          <p role="alert" style={{ color: 'var(--color-accent-rose)', marginBottom: 'var(--space-4)' }}>
+            {catalogError || cartError}
+          </p>
+        )}
+        <div className="catalog-layout-grid" style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 'var(--space-8)', alignItems: 'start' }}>
           
           {/* Left Column: Filter Sidebar */}
           <ProductFilterSidebar
