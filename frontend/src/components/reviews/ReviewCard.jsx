@@ -8,9 +8,7 @@ export default function ReviewCard({ review, onHelpfulVote }) {
   const handleVote = async () => {
     if (hasVoted) return;
     setHasVoted(true);
-    setHelpfulCount(prev => prev + 1);
-    await voteHelpful(review.id);
-    if (onHelpfulVote) onHelpfulVote(review.id);
+    return;
   };
 
   const formattedDate = review.createdAt
@@ -141,38 +139,45 @@ export default function ReviewCard({ review, onHelpfulVote }) {
         marginTop: 'auto',
       }}>
         <div>
-          {review.recommend !== false ? (
+          {review.recommend === true ? (
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-accent-sage)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '500' }}>
               <span>👍</span> Recommends this product
             </span>
-          ) : (
+          ) : review.recommend === false ? (
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
               Neutral feedback
             </span>
-          )}
+          ) : null}
         </div>
 
         {/* Helpful vote button */}
-        <button
-          onClick={handleVote}
-          style={{
-            background: hasVoted ? 'rgba(232, 114, 150, 0.2)' : 'rgba(255,255,255,0.05)',
-            border: hasVoted ? '1px solid var(--color-accent-rose)' : '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-full)',
-            padding: '4px 12px',
-            fontSize: '11px',
-            color: hasVoted ? 'var(--color-accent-rose)' : 'var(--color-text-secondary)',
-            cursor: hasVoted ? 'default' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all var(--transition-fast)',
-          }}
-          disabled={hasVoted}
-        >
-          <span>{hasVoted ? '❤️' : '🤍'}</span>
-          <span>Helpful ({helpfulCount})</span>
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+          <button
+            onClick={handleVote}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-full)',
+              padding: '4px 12px',
+              fontSize: '11px',
+              color: 'var(--color-text-muted)',
+              cursor: 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all var(--transition-fast)',
+              opacity: 0.7,
+            }}
+            disabled
+            title="Helpful voting is temporary only in the current build and is not persisted to the database."
+          >
+            <span>🤍</span>
+            <span>Helpful ({helpfulCount})</span>
+          </button>
+          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+            Temporary only
+          </span>
+        </div>
       </div>
     </div>
   );

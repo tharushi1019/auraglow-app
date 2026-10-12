@@ -30,6 +30,36 @@ export default function OrderTrackingPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState('');
+
+  async function cancelOrder() {
+    if (!activeOrder?._uuid || !window.confirm('Are you sure you want to cancel this pending order?')) return;
+
+    setCancelling(true);
+    setCancelError('');
+    try {
+      const rawApi = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const API = rawApi.endsWith('/api/v1') ? rawApi : `${rawApi}/api/v1`;
+      const response = await fetch(`${API}/orders/${encodeURIComponent(activeOrder._uuid)}/cancel`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auraglow_token')}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Unable to cancel this order.');
+
+      const updatedOrder = { ...activeOrder, status: data.order.status };
+      setOrders(previous => previous.map(order => order._uuid === updatedOrder._uuid ? updatedOrder : order));
+      setSelectedOrder(updatedOrder);
+    } catch (error) {
+      setCancelError(error.message || 'Unable to cancel this order. Please try again.');
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   useEffect(() => {
     // If auth state is still loading, wait
@@ -194,6 +224,11 @@ export default function OrderTrackingPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+            {activeOrder?.status?.toLowerCase() === 'pending' && (
+              <button type="button" className="btn btn-secondary btn-sm btn-pill" onClick={cancelOrder} disabled={cancelling}>
+                {cancelling ? 'Cancelling…' : 'Cancel Order'}
+              </button>
+            )}
             {orders.length > 1 && (
               <select
                 value={activeOrder?.orderId || ''}
@@ -216,6 +251,7 @@ export default function OrderTrackingPage() {
             </Link>
           </div>
         </div>
+        {cancelError && <p role="alert" style={{ color: 'var(--color-error)', margin: '-var(--space-6) 0 var(--space-6)' }}>{cancelError}</p>}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
 

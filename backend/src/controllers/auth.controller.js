@@ -10,26 +10,6 @@ const { sendWelcomeEmail, sendSkinQuizEmail } = require('../services/emailServic
 
 const SALT_ROUNDS = 10;
 
-// In-memory fallback user store for local development when Supabase DB table is missing
-const mockUsersStore = [
-  {
-    id: 'usr-admin-001',
-    name: 'Tharushi Admin',
-    email: 'admin@auraglow.com',
-    password_hash: bcrypt.hashSync('Admin@AuraGlow2026', 10),
-    role: 'admin',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'usr-customer-001',
-    name: 'Demo Customer',
-    email: 'demo@auraglow.com',
-    password_hash: bcrypt.hashSync('Customer@123', 10),
-    role: 'customer',
-    created_at: new Date().toISOString(),
-  },
-];
-
 const mockSkinProfilesStore = {
   'usr-customer-001': {
     skin_type: 'combination',
@@ -52,73 +32,45 @@ function signToken(user) {
 async function register(req, res, next) {
   try {
     const { name, email, password } = req.body;
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
-    const errors = validateRegisterInput({ name, email, password });
+    const errors = validateRegisterInput({ name, email: normalizedEmail, password });
     if (errors.length) return res.status(400).json({ success: false, message: errors[0], errors });
 
-    const normalizedEmail = email.toLowerCase();
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Try Supabase first
-    try {
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', normalizedEmail)
-        .maybeSingle();
+    const { data: existingUser, error: lookupError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
 
-      if (existingUser) {
-        return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
-      }
-
-      const { data: newUser, error } = await supabase
-        .from('users')
-        .insert([{ name, email: normalizedEmail, password_hash: passwordHash, role: 'customer' }])
-        .select('id, name, email, role, created_at')
-        .single();
-
-      if (!error && newUser) {
-        const token = signToken(newUser);
-        // Fire welcome email asynchronously — don't block response
-        sendWelcomeEmail(newUser).catch(e => console.warn('[Email] Welcome email error:', e.message));
-        return res.status(201).json({
-          success: true,
-          message: 'Account created successfully.',
-          token,
-          user: newUser,
-        });
-      }
-    } catch (sbErr) {
-      console.warn('⚠️ Supabase register error, falling back to local store:', sbErr.message);
+    if (lookupError) {
+      console.error('[Auth] Registration account lookup failed:', lookupError.message);
+      return res.status(503).json({ success: false, message: 'Account storage is temporarily unavailable.' });
     }
-
-    // Fallback to in-memory mock store if Supabase table isn't ready
-    const existingMock = mockUsersStore.find(u => u.email === normalizedEmail);
-    if (existingMock) {
+    if (existingUser) {
       return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
     }
 
-    const newUser = {
-      id: `usr-${Date.now()}`,
-      name,
-      email: normalizedEmail,
-      password_hash: passwordHash,
-      role: 'customer',
-      created_at: new Date().toISOString(),
-    };
-    mockUsersStore.push(newUser);
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert([{ name, email: normalizedEmail, password_hash: passwordHash, role: 'customer' }])
+      .select('id, name, email, role, created_at')
+      .single();
+
+    if (insertError || !newUser) {
+      console.error('[Auth] Registration insert failed:', insertError?.message || 'No user was returned.');
+      return res.status(503).json({ success: false, message: 'Unable to create an account right now.' });
+    }
 
     const token = signToken(newUser);
-    const { password_hash, ...safeUser } = newUser;
-
-    // Fire welcome email asynchronously — don't block response
-    sendWelcomeEmail(safeUser).catch(e => console.warn('[Email] Welcome email error:', e.message));
-
+    sendWelcomeEmail(newUser).catch(e => console.warn('[Email] Welcome email error:', e.message));
     return res.status(201).json({
       success: true,
       message: 'Account created successfully.',
       token,
-      user: safeUser,
+      user: newUser,
     });
   } catch (err) {
     next(err);
@@ -129,74 +81,54 @@ async function register(req, res, next) {
 async function login(req, res, next) {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
-    const errors = validateLoginInput({ email, password });
+    const errors = validateLoginInput({ email: normalizedEmail, password });
     if (errors.length) return res.status(400).json({ success: false, message: errors[0], errors });
 
-    const normalizedEmail = email.toLowerCase();
+    const { data: user, error: lookupError } = await supabase
+      .from('users')
+      .select('id, name, email, password_hash, role, created_at')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
 
-    // Try Supabase first
-    try {
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('id, name, email, password_hash, role, created_at')
-        .eq('email', normalizedEmail)
-        .maybeSingle();
-
-      if (!error && user) {
-        const passwordMatches = await bcrypt.compare(password, user.password_hash);
-        if (passwordMatches) {
-          const token = signToken(user);
-          const { password_hash, ...safeUser } = user;
-
-          // Also fetch skin profile for instant UI sync on login
-          let userSkinProfile = mockSkinProfilesStore[user.id] || null;
-          try {
-            const { data: spData } = await supabase
-              .from('skin_profiles')
-              .select('skin_type, concerns, allergens, skin_tone, undertone')
-              .eq('user_id', user.id)
-              .maybeSingle();
-            if (spData) userSkinProfile = spData;
-          } catch (spErr) {
-            console.warn('[Login] Skin profile fetch note:', spErr.message);
-          }
-
-          return res.status(200).json({
-            success: true,
-            message: 'Logged in successfully.',
-            token,
-            user: safeUser,
-            skinProfile: userSkinProfile,
-          });
-        } else {
-          return res.status(401).json({ success: false, message: 'Invalid email or password.' });
-        }
-      }
-    } catch (sbErr) {
-      console.warn('⚠️ Supabase login error, falling back to local store:', sbErr.message);
+    if (lookupError) {
+      console.error('[Auth] Login account lookup failed:', lookupError.message);
+      return res.status(503).json({ success: false, message: 'Account storage is temporarily unavailable.' });
     }
-
-    // Fallback to in-memory user store
-    const mockUser = mockUsersStore.find(u => u.email === normalizedEmail);
-    if (!mockUser) {
+    if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
-    const passwordMatches = await bcrypt.compare(password, mockUser.password_hash);
+    const passwordMatches = await bcrypt.compare(password, user.password_hash);
     if (!passwordMatches) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
-    const token = signToken(mockUser);
-    const { password_hash, ...safeUser } = mockUser;
+    const token = signToken(user);
+    const { password_hash, ...safeUser } = user;
+    let userSkinProfile = mockSkinProfilesStore[user.id] || null;
+    try {
+      const { data: skinProfile, error: profileError } = await supabase
+        .from('skin_profiles')
+        .select('skin_type, concerns, allergens, skin_tone, undertone')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (profileError) {
+        console.warn('[Auth] Login skin profile lookup failed:', profileError.message);
+      } else if (skinProfile) {
+        userSkinProfile = skinProfile;
+      }
+    } catch (profileError) {
+      console.warn('[Auth] Login skin profile lookup failed:', profileError.message);
+    }
 
     return res.status(200).json({
       success: true,
       message: 'Logged in successfully.',
       token,
       user: safeUser,
-      skinProfile: mockSkinProfilesStore[mockUser.id] || null,
+      skinProfile: userSkinProfile,
     });
   } catch (err) {
     next(err);
@@ -222,49 +154,46 @@ async function getProfile(req, res, next) {
       }
 
       let { data: user, error: userError } = await query.maybeSingle();
+      if (userError) {
+        console.error('[Auth] Profile lookup failed:', userError.message);
+        return res.status(503).json({ success: false, message: 'Unable to load your account right now.' });
+      }
 
       // If not found by uid, attempt lookup by email
       if (!user && userEmail) {
-        const { data: userByEmail } = await supabase
+        const { data: userByEmail, error: emailLookupError } = await supabase
           .from('users')
           .select('id, name, email, role, created_at')
           .eq('email', userEmail)
           .maybeSingle();
+        if (emailLookupError) {
+          console.error('[Auth] Profile email lookup failed:', emailLookupError.message);
+          return res.status(503).json({ success: false, message: 'Unable to load your account right now.' });
+        }
         if (userByEmail) user = userByEmail;
       }
 
       if (user) {
         const resolvedUserId = user.id;
-        const { data: skinProfile } = await supabase
+        const { data: skinProfile, error: profileError } = await supabase
           .from('skin_profiles')
           .select('skin_type, concerns, allergens, skin_tone, undertone')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
+        if (profileError) console.warn('[Auth] Profile skin lookup failed:', profileError.message);
 
         return res.status(200).json({
           success: true,
           user,
-          skinProfile: skinProfile || mockSkinProfilesStore[resolvedUserId] || null,
+          skinProfile: skinProfile || null,
         });
       }
     } catch (sbErr) {
-      console.warn('⚠️ Supabase profile error, falling back to local store:', sbErr.message);
+      console.error('[Auth] Profile lookup failed:', sbErr.message);
+      return res.status(503).json({ success: false, message: 'Unable to load your account right now.' });
     }
 
-    // Fallback user store
-    const mockUser = mockUsersStore.find(u => u.id === uid) || {
-      id: uid,
-      name: req.user.name || 'AuraGlow User',
-      email: req.user.email,
-      role: req.user.role || 'customer',
-      created_at: new Date().toISOString(),
-    };
-
-    return res.status(200).json({
-      success: true,
-      user: mockUser,
-      skinProfile: mockSkinProfilesStore[uid] || null,
-    });
+    return res.status(401).json({ success: false, message: 'The account associated with this token was not found.' });
   } catch (err) {
     next(err);
   }
@@ -358,4 +287,3 @@ module.exports = {
   getProfile,
   submitSkinQuiz,
 };
-

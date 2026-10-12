@@ -8,11 +8,12 @@
 const express = require('express');
 const router = express.Router();
 const reviewController = require('../controllers/review.controller');
+const { authenticate } = require('../middleware/auth.middleware');
 
 // Reviews endpoints
 router.get('/product/:productId', reviewController.getProductReviews);
 router.get('/stats/:productId', reviewController.getReviewStats);
-router.post('/', reviewController.createReview);
+router.post('/', authenticate, reviewController.createReview);
 router.post('/:id/vote', reviewController.voteHelpful);
 
 // Recommendation endpoints

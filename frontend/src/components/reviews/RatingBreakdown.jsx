@@ -3,8 +3,8 @@ import React from 'react';
 export default function RatingBreakdown({
   stats = {
     totalReviews: 0,
-    averageRating: 5.0,
-    recommendPercentage: 96,
+    averageRating: 0,
+    recommendPercentage: null,
     breakdown: [],
   },
   selectedStarFilter = 'all',
@@ -14,9 +14,9 @@ export default function RatingBreakdown({
   const breakdown = stats.breakdown && stats.breakdown.length > 0
     ? stats.breakdown
     : [
-        { stars: 5, count: 18, percentage: 80 },
-        { stars: 4, count: 4, percentage: 15 },
-        { stars: 3, count: 1, percentage: 5 },
+      { stars: 5, count: 0, percentage: 0 },
+      { stars: 4, count: 0, percentage: 0 },
+      { stars: 3, count: 0, percentage: 0 },
         { stars: 2, count: 0, percentage: 0 },
         { stars: 1, count: 0, percentage: 0 },
       ];
@@ -43,18 +43,18 @@ export default function RatingBreakdown({
           color: 'var(--color-text-primary)',
           lineHeight: 1,
         }}>
-          {stats.averageRating ? stats.averageRating.toFixed(1) : '4.8'}
+          {Number.isFinite(Number(stats.averageRating)) ? Number(stats.averageRating).toFixed(1) : '—'}
         </div>
 
         {/* Stars */}
         <div style={{ display: 'flex', gap: '3px', color: 'var(--color-accent-gold)', fontSize: '18px' }}>
           {[1, 2, 3, 4, 5].map(i => (
-            <span key={i} style={{ opacity: i <= Math.round(stats.averageRating || 5) ? 1 : 0.25 }}>★</span>
+            <span key={i} style={{ opacity: i <= Math.round(stats.averageRating || 0) ? 1 : 0.25 }}>★</span>
           ))}
         </div>
 
         <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>
-          Based on {stats.totalReviews || 24} customer reviews
+          Based on {stats.totalReviews ?? 0} customer reviews
         </div>
 
         {/* Recommendation badge */}
@@ -68,7 +68,9 @@ export default function RatingBreakdown({
           color: 'var(--color-accent-sage)',
           fontWeight: '600',
         }}>
-          ✨ {stats.recommendPercentage || 96}% would recommend this
+          {stats.recommendPercentage == null
+            ? 'Recommendation data unavailable'
+            : `✨ ${stats.recommendPercentage}% would recommend this`}
         </div>
 
         <button

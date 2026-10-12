@@ -6,7 +6,7 @@ import ProductCard from '@/components/catalog/ProductCard';
 import { useCart } from '@/context/CartContext';
 
 export default function WishlistPage() {
-  const { wishlist, toggleWishlist, addToCart } = useCart();
+  const { wishlist, toggleWishlist, addToCart, error, loading } = useCart();
 
   const handleAddAllToBag = () => {
     wishlist.forEach(prod => {
@@ -48,7 +48,11 @@ export default function WishlistPage() {
           )}
         </div>
 
-        {wishlist.length === 0 ? (
+        {error && <p role="alert" style={{ color: 'var(--color-accent-rose)', marginBottom: 'var(--space-4)' }}>{error}</p>}
+
+        {loading ? (
+          <p role="status" style={{ color: 'var(--color-text-secondary)' }}>Loading your wishlist...</p>
+        ) : wishlist.length === 0 ? (
           <div style={{
             background: 'var(--color-bg-card)',
             border: '1px solid var(--color-border)',
