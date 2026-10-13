@@ -10,7 +10,6 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const supabase = require('../config/supabaseClient');
 const { sendOrderInvoice } = require('../services/emailService');
-const { initialProducts } = require('./product.controller');
 
 // Initialize Stripe with secret key (sandbox test mode)
 let stripe = null;
@@ -395,18 +394,6 @@ exports.createOrder = async (req, res, next) => {
       } catch (dbErr) {
         console.warn('⚠️ Supabase order creation fallback:', dbErr.message);
       }
-    }
-
-    // ── Inventory / Stock Deduction (In-Memory Fallback) ──
-    if (Array.isArray(items)) {
-      items.forEach(it => {
-        const localProd = initialProducts.find(p =>
-          p.id === it.id || (p.name && it.name && p.name.toLowerCase().trim() === it.name.toLowerCase().trim())
-        );
-        if (localProd && typeof localProd.stock === 'number') {
-          localProd.stock = Math.max(0, localProd.stock - (it.quantity || 1));
-        }
-      });
     }
 
     ordersStore[orderId] = order;
