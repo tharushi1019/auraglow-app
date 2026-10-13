@@ -14,6 +14,44 @@
 
 const supabase = require('../config/supabaseClient');
 
+// ─── Retry helper for transient network errors (fetch failed / ECONNRESET) ────
+/**
+ * Retries a Supabase query function up to `maxAttempts` times.
+ * Only retries on transient network errors, not on logical errors.
+ */
+async function withRetry(fn, maxAttempts = 3, delayMs = 500) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await fn();
+      // Supabase returns { data, error }. Retry only on network-level fetch errors.
+      if (result.error && isNetworkError(result.error.message)) {
+        lastError = result.error;
+        if (attempt < maxAttempts) {
+          console.warn(`[Retry] Attempt ${attempt}/${maxAttempts} failed (network): ${result.error.message}. Retrying in ${delayMs}ms...`);
+          await new Promise(r => setTimeout(r, delayMs * attempt));
+          continue;
+        }
+      }
+      return result;
+    } catch (err) {
+      lastError = err;
+      if (isNetworkError(err.message) && attempt < maxAttempts) {
+        console.warn(`[Retry] Attempt ${attempt}/${maxAttempts} threw: ${err.message}. Retrying in ${delayMs}ms...`);
+        await new Promise(r => setTimeout(r, delayMs * attempt));
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw lastError || new Error('Max retry attempts reached');
+}
+
+function isNetworkError(msg = '') {
+  const m = msg.toLowerCase();
+  return m.includes('fetch failed') || m.includes('econnreset') || m.includes('econnrefused') || m.includes('network') || m.includes('etimedout');
+}
+
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
 function mapDbProduct(p, salesCount = 0) {
@@ -279,28 +317,39 @@ exports.getProductById = async (req, res, next) => {
     const { id } = req.params;
     if (!id) return res.status(400).json({ success: false, message: 'Product ID is required.' });
 
-    const { data: product, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .eq('is_active', true)
-      .maybeSingle();
+    // Use withRetry to handle transient fetch failed / network blips
+    const { data: product, error } = await withRetry(() =>
+      supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .eq('is_active', true)
+        .maybeSingle()
+    );
 
     if (error) {
       console.error('[ProductById] Lookup failed:', error.message);
-      return res.status(503).json({ success: false, message: 'Product details are temporarily unavailable.' });
+      return res.status(503).json({ success: false, message: 'Product details are temporarily unavailable. Please try again.' });
     }
     if (!product) {
-      return res.status(404).json({ success: false, message: `Product '${id}' not found.` });
+      // Also try without is_active filter in case the flag is null/false in DB
+      const { data: anyProduct } = await withRetry(() =>
+        supabase.from('products').select('*').eq('id', id).maybeSingle()
+      );
+      if (!anyProduct) {
+        return res.status(404).json({ success: false, message: `Product not found.` });
+      }
+      // Found but inactive — still return it so users don't hit a blank page
+      console.warn(`[ProductById] Product '${id}' exists but is_active=false — serving anyway.`);
+      return res.json({ success: true, product: mapDbProduct(anyProduct, 0) });
     }
 
     // Fetch live rating for this product
     let avg_rating = 4.5, review_count = 0;
     try {
-      const { data: reviewData } = await supabase
-        .from('reviews')
-        .select('rating')
-        .eq('product_id', id);
+      const { data: reviewData } = await withRetry(() =>
+        supabase.from('reviews').select('rating').eq('product_id', id)
+      );
       if (reviewData && reviewData.length > 0) {
         review_count = reviewData.length;
         avg_rating = (reviewData.reduce((a, r) => a + r.rating, 0) / review_count).toFixed(1);
@@ -310,10 +359,9 @@ exports.getProductById = async (req, res, next) => {
     // Fetch total units sold
     let salesCount = 0;
     try {
-      const { data: salesData } = await supabase
-        .from('order_items')
-        .select('quantity')
-        .eq('product_id', id);
+      const { data: salesData } = await withRetry(() =>
+        supabase.from('order_items').select('quantity').eq('product_id', id)
+      );
       if (salesData) salesCount = salesData.reduce((a, r) => a + (r.quantity || 1), 0);
     } catch (e) {}
 
@@ -322,7 +370,8 @@ exports.getProductById = async (req, res, next) => {
       product: mapDbProduct({ ...product, avg_rating, review_count }, salesCount),
     });
   } catch (error) {
-    next(error);
+    console.error('[ProductById] Unhandled error:', error.message);
+    return res.status(503).json({ success: false, message: 'Product details are temporarily unavailable. Please try again.' });
   }
 };
 
