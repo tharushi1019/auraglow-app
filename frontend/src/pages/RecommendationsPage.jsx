@@ -4,7 +4,6 @@ import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
 import PersonalizedRoutineWidget from '@/components/reviews/PersonalizedRoutineWidget';
 import ProductCard from '@/components/catalog/ProductCard';
-import { products as fallbackProducts } from '@/data/mockData';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { askAiDermatologist } from '@/api/aiApi';
@@ -17,17 +16,24 @@ export default function RecommendationsPage() {
   const { addToCart, requireAuth } = useCart();
   const { skinProfile, user } = useAuth();
 
-  const [catalogProducts, setCatalogProducts] = useState(fallbackProducts);
+  const [catalogProducts, setCatalogProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
+    setLoadingProducts(true);
     getProducts({ limit: 50 })
       .then(res => {
-        if (isMounted && res && Array.isArray(res.products) && res.products.length > 0) {
+        if (isMounted && res && Array.isArray(res.products)) {
           setCatalogProducts(res.products);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn('Could not load live products:', err.message);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingProducts(false);
+      });
     return () => { isMounted = false; };
   }, []);
 
@@ -109,8 +115,8 @@ export default function RecommendationsPage() {
   }, [skinProfile]);
 
   const matchedCosmetics = useMemo(() => {
-    return getMatchingCosmetics(effectiveProfile);
-  }, [effectiveProfile]);
+    return getMatchingCosmetics(effectiveProfile, catalogProducts);
+  }, [effectiveProfile, catalogProducts]);
 
   const topRecommendedProducts = useMemo(() => {
     const scored = (catalogProducts || []).map(p => ({
@@ -567,16 +573,23 @@ export default function RecommendationsPage() {
             </Link>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 'var(--space-6)' }}>
-            {topRecommendedProducts.map(product => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                viewMode="grid"
-                onAddToCart={handleAddToCart}
-              />
-            ))}
-          </div>
+          {loadingProducts ? (
+            <div style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--color-text-muted)' }}>
+              <div style={{ fontSize: '28px', marginBottom: 'var(--space-2)' }}>✨</div>
+              <p style={{ fontSize: 'var(--text-sm)' }}>Matching live catalog formulas to your clinical skin profile...</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 'var(--space-6)' }}>
+              {topRecommendedProducts.map(product => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  viewMode="grid"
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
       </main>

@@ -181,3 +181,20 @@
   0%   { filter: brightness(1) drop-shadow(0 0 0px transparent); }
   100% { filter: brightness(1.15) drop-shadow(0 0 8px rgba(232, 180, 160, 0.3)); }
 }
+
+/* Ensure all select dropdown option elements display black text clearly */
+select option,
+select optgroup,
+.input option,
+.input optgroup {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  font-weight: 500 !important;
+}
+
+select option:checked,
+select option:hover,
+select option:focus {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+}

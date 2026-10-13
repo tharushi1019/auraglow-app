@@ -190,9 +190,9 @@ export default function ProductDetailPage() {
           alignItems: 'start',
           marginBottom: 'var(--space-16)',
         }}>
-          {/* Left Column: Image Gallery */}
+          {/* Left Column: Single Product Image */}
           <ProductImageGallery
-            images={product.imageGallery || [product.image]}
+            images={[product.image || (Array.isArray(product.images) && product.images[0]) || ''].filter(Boolean)}
             name={product.name}
             badge={product.badge}
             badgeClass={product.badgeClass}

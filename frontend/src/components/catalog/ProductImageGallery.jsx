@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 
 export default function ProductImageGallery({ images = [], name = 'Product', badge, badgeClass }) {
-  const allImages = images.length > 0
-    ? images
-    : ['https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=800&q=80'];
+  // Always use the single authentic product image (no extra/mocked thumbnails)
+  const displayImage = (images && images.length > 0 && images[0])
+    ? images[0]
+    : 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=800&q=80';
 
-  const [activeIndex, setActiveIndex] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
 
@@ -18,7 +18,7 @@ export default function ProductImageGallery({ images = [], name = 'Product', bad
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      {/* Main Image Stage */}
+      {/* Main Single Product Image Stage */}
       <div
         style={{
           width: '100%',
@@ -35,8 +35,8 @@ export default function ProductImageGallery({ images = [], name = 'Product', bad
         onMouseMove={handleMouseMove}
       >
         <img
-          src={allImages[activeIndex]}
-          alt={`${name} - View ${activeIndex + 1}`}
+          src={displayImage}
+          alt={name}
           style={{
             position: 'absolute',
             inset: 0,
@@ -46,6 +46,9 @@ export default function ProductImageGallery({ images = [], name = 'Product', bad
             transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
             transform: isZoomed ? 'scale(1.75)' : 'scale(1)',
             transition: isZoomed ? 'transform 0.1s ease-out' : 'transform 0.3s ease',
+          }}
+          onError={(e) => {
+            e.target.src = 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=800&q=80';
           }}
         />
 
@@ -77,40 +80,6 @@ export default function ProductImageGallery({ images = [], name = 'Product', bad
           <span>🔍</span> Hover to zoom
         </div>
       </div>
-
-      {/* Thumbnails Row */}
-      {allImages.length > 1 && (
-        <div style={{ display: 'flex', gap: 'var(--space-3)', overflowX: 'auto', paddingBottom: '4px' }}>
-          {allImages.map((img, idx) => {
-            const isSelected = idx === activeIndex;
-            return (
-              <button
-                key={idx}
-                onClick={() => setActiveIndex(idx)}
-                style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: 'var(--radius-lg)',
-                  overflow: 'hidden',
-                  border: isSelected ? '2px solid var(--color-accent-rose)' : '1px solid var(--color-border)',
-                  background: 'var(--color-bg-secondary)',
-                  padding: 0,
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  transition: 'all var(--transition-fast)',
-                  opacity: isSelected ? 1 : 0.65,
-                }}
-              >
-                <img
-                  src={img}
-                  alt={`${name} thumbnail ${idx + 1}`}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              </button>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

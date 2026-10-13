@@ -80,7 +80,7 @@ exports.confirmPaymentIntent = async (req, res, next) => {
 
     const intent = await stripe.paymentIntents.confirm(paymentIntentId, {
       payment_method: paymentMethod,
-      return_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/orders/confirm`,
+      return_url: `${process.env.FRONTEND_URL || 'https://auraglow-app.netlify.app'}/orders/confirm`,
     });
 
     res.status(200).json({

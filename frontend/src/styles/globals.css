@@ -174,7 +174,7 @@ small {
    FORM ELEMENTS BASE
    ========================================================================== */
 
-input, textarea, select {
+input, textarea, select, .input {
   font-family: var(--font-body);
   font-size: var(--text-base);
   color: var(--color-text-primary);
@@ -187,11 +187,32 @@ input, textarea, select {
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
+/* ==========================================================================
+   DROPDOWN SELECT & OPTION VISIBILITY FIX
+   Ensures dropdown options text is crisp black on white popup background
+   ========================================================================== */
+select option,
+select optgroup,
+.input option,
+.input optgroup {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  font-weight: 500;
+  padding: 8px 12px;
+}
+
+select option:checked,
+select option:hover,
+select option:focus {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
 input::placeholder, textarea::placeholder {
   color: var(--color-text-muted);
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus, textarea:focus, select:focus, .input:focus {
   border-color: var(--color-border-focus);
   box-shadow: 0 0 0 3px rgba(232, 180, 160, 0.12);
 }
@@ -486,6 +507,11 @@ input:disabled, textarea:disabled, select:disabled {
    @media (max-width: 480px)  → Mobile portrait
    ========================================================================== */
 
+.catalog-filter-sidebar {
+  position: sticky;
+  top: calc(var(--nav-height) + var(--space-6));
+}
+
 @media (max-width: 1024px) {
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
@@ -514,6 +540,12 @@ input:disabled, textarea:disabled, select:disabled {
 
   .catalog-layout-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  .catalog-filter-sidebar {
+    position: static !important;
+    top: auto !important;
+    margin-bottom: var(--space-6);
   }
 
   .cart-layout-grid {

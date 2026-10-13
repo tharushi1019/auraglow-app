@@ -1,40 +1,33 @@
-import React, { useState } from 'react';
-import { reviews as mockReviews } from '@/data/mockData';
+import React, { useState, useEffect } from 'react';
+import { getProductReviews, submitReview } from '@/services/reviewService';
 
-export default function ProductReviewsPreview({ productId, rating = 4.8, reviewCount = 120 }) {
-  const productReviews = mockReviews.filter(r => r.productId === productId);
+export default function ProductReviewsPreview({ productId, rating = 4.8, reviewCount = 0 }) {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [newRating, setNewRating] = useState(5);
   const [newTitle, setNewTitle] = useState('');
   const [newBody, setNewBody] = useState('');
-  const [reviewsList, setReviewsList] = useState(
-    productReviews.length > 0 ? productReviews : [
-      {
-        id: 'rev-sample-1',
-        productId,
-        userId: 'usr-1',
-        rating: 5,
-        title: 'Absolutely essential in my routine!',
-        body: 'Obsessed with the texture and noticeable glow within just 10 days. AuraGlow’s clean formulation is truly top-tier.',
-        date: '2026-08-18',
-        verified: true,
-        userName: 'Elena V.',
-        skinType: 'Combination Skin',
-      },
-      {
-        id: 'rev-sample-2',
-        productId,
-        userId: 'usr-2',
-        rating: 5,
-        title: 'Gentle on sensitive skin & fast results',
-        body: 'No redness or irritation. Smells natural and absorbs into the skin like a dream. Highly recommend to everyone.',
-        date: '2026-08-12',
-        verified: true,
-        userName: 'Sasha R.',
-        skinType: 'Dry & Sensitive',
-      },
-    ]
-  );
+  const [reviewsList, setReviewsList] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+
+  useEffect(() => {
+    if (!productId) return;
+    let isMounted = true;
+    setLoadingReviews(true);
+    getProductReviews(productId)
+      .then(res => {
+        if (isMounted && res && Array.isArray(res.reviews)) {
+          setReviewsList(res.reviews);
+        }
+      })
+      .catch(() => {
+        // Fallback to empty
+      })
+      .finally(() => {
+        if (isMounted) setLoadingReviews(false);
+      });
+    return () => { isMounted = false; };
+  }, [productId]);
+
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmitReview = (e) => {
