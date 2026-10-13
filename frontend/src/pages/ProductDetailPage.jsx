@@ -11,6 +11,7 @@ import ProductCard from '@/components/catalog/ProductCard';
 import { useCurrency } from '@/context/CurrencyContext';
 import { useCart } from '@/context/CartContext';
 import { getProductById, getRelatedProducts } from '@/services/productService';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -42,7 +43,11 @@ export default function ProductDetailPage() {
         } else {
           setProduct(data);
           if (data.shades && data.shades.length > 0) {
-            setSelectedShade(data.shades[0]);
+            const firstShade = data.shades[0];
+            const firstShadeName = typeof firstShade === 'object' && firstShade !== null
+              ? (firstShade.name || '')
+              : String(firstShade || '');
+            setSelectedShade(firstShadeName);
           } else {
             setSelectedShade(null);
           }
@@ -66,7 +71,9 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = async () => {
     if (!product || product.stock === 0) return;
-    const shadeName = selectedShade?.name || (typeof selectedShade === 'string' ? selectedShade : null);
+    const shadeName = typeof selectedShade === 'object' && selectedShade !== null
+      ? (selectedShade.name || null)
+      : (typeof selectedShade === 'string' && selectedShade.trim() ? selectedShade.trim() : null);
     const addedSuccess = await addToCart(product, quantity, shadeName);
     if (addedSuccess) {
       setAdded(true);
@@ -78,7 +85,9 @@ export default function ProductDetailPage() {
   const handleBuyNow = async () => {
     if (!product || product.stock === 0) return;
     if (requireAuth('checkout immediately')) return;
-    const shadeName = selectedShade?.name || (typeof selectedShade === 'string' ? selectedShade : null);
+    const shadeName = typeof selectedShade === 'object' && selectedShade !== null
+      ? (selectedShade.name || null)
+      : (typeof selectedShade === 'string' && selectedShade.trim() ? selectedShade.trim() : null);
     const addedSuccess = await addToCart(product, quantity, shadeName);
     if (!addedSuccess) return;
     showToast(`🛍️ Proceeding to checkout with "${product.name}"...`);
@@ -135,8 +144,9 @@ export default function ProductDetailPage() {
     : 0;
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-primary)' }}>
-      <Navbar />
+    <ErrorBoundary>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-primary)' }}>
+        <Navbar />
 
       {/* Toast Notification */}
       {toastMessage && (
@@ -479,26 +489,29 @@ export default function ProductDetailPage() {
               </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-4)' }}>
-                {(product.ingredients || ['Hyaluronic Acid', 'Rose Extract', 'Vitamin C', 'Aloe Vera']).map(ing => (
-                  <div
-                    key={ing}
-                    style={{
-                      background: 'var(--color-bg-secondary)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-xl)',
-                      padding: 'var(--space-4)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-3)',
-                    }}
-                  >
-                    <span style={{ fontSize: '20px' }}>🌿</span>
-                    <div>
-                      <h5 style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)', fontWeight: '700' }}>{ing}</h5>
-                      <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Pure Botanical Active</span>
+                {(product.ingredients || ['Hyaluronic Acid', 'Rose Extract', 'Vitamin C', 'Aloe Vera']).map((ing, idx) => {
+                  const ingName = typeof ing === 'object' && ing !== null ? (ing.name || '') : String(ing);
+                  return (
+                    <div
+                      key={ingName || idx}
+                      style={{
+                        background: 'var(--color-bg-secondary)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 'var(--radius-xl)',
+                        padding: 'var(--space-4)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-3)',
+                      }}
+                    >
+                      <span style={{ fontSize: '20px' }}>🌿</span>
+                      <div>
+                        <h5 style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)', fontWeight: '700' }}>{ingName}</h5>
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Pure Botanical Active</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -541,25 +554,28 @@ export default function ProductDetailPage() {
               </p>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-                {(product.skinTypes || ['All Skin Types', 'Sensitive Skin', 'Dry Skin', 'Combination']).map(st => (
-                  <span
-                    key={st}
-                    style={{
-                      background: 'rgba(184, 169, 217, 0.15)',
-                      border: '1px solid var(--color-accent-lavender)',
-                      borderRadius: 'var(--radius-full)',
-                      padding: '8px 18px',
-                      fontSize: 'var(--text-sm)',
-                      fontWeight: '600',
-                      color: 'var(--color-text-primary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <span>✓</span> {st}
-                  </span>
-                ))}
+                {(product.skinTypes || ['All Skin Types', 'Sensitive Skin', 'Dry Skin', 'Combination']).map((st, idx) => {
+                  const stName = typeof st === 'object' && st !== null ? (st.name || '') : String(st);
+                  return (
+                    <span
+                      key={stName || idx}
+                      style={{
+                        background: 'rgba(184, 169, 217, 0.15)',
+                        border: '1px solid var(--color-accent-lavender)',
+                        borderRadius: 'var(--radius-full)',
+                        padding: '8px 18px',
+                        fontSize: 'var(--text-sm)',
+                        fontWeight: '600',
+                        color: 'var(--color-text-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <span>✓</span> {stName}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -630,5 +646,6 @@ export default function ProductDetailPage() {
 
       <Footer />
     </div>
+  </ErrorBoundary>
   );
 }
