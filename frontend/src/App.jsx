@@ -6,6 +6,7 @@ import './styles/global.css'
 // ─── Shared Layout Components ──────────────────────────────────────────────
 import Navbar from './components/common/Navbar'
 import Footer from './components/common/Footer'
+import ErrorBoundary from './components/common/ErrorBoundary'
 
 // ─── Contexts ──────────────────────────────────────────────────────────────
 import { CartProvider } from './context/CartContext'
@@ -59,7 +60,8 @@ function App() {
     <BrowserRouter>
       <CartProvider>
         <ScrollToTop />
-        <Routes>
+        <ErrorBoundary>
+          <Routes>
             {/* ── Home (manages its own nav + layout internally) ── */}
             <Route path="/" element={<Home />} />
 
@@ -99,6 +101,7 @@ function App() {
             {/* ── Fallback 404 ── */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+        </ErrorBoundary>
         </CartProvider>
       </BrowserRouter>
   )
