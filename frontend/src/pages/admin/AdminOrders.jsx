@@ -3,86 +3,28 @@ import { useSearchParams } from 'react-router-dom';
 import { useCurrency } from '@/context/CurrencyContext';
 import { supabase } from '@/lib/supabase';
 
-const initialOrders = [
-  {
-    id: 'ORD-8901',
-    customer: 'Sasha R.',
-    email: 'sasha@example.com',
-    phone: '+94 77 123 4567',
-    date: '2026-08-24 14:32',
-    amount: 16100,
-    status: 'Processing',
-    paymentMethod: 'Stripe (Visa •••• 4242)',
-    address: '14 Galle Road, Colombo 03, Western Province',
-    items: [
-      { name: 'Radiant Glow Serum', qty: 1, price: 8900 },
-      { name: 'Petal Hydra Cream', qty: 1, price: 7200 }
-    ]
-  },
-  {
-    id: 'ORD-8900',
-    customer: 'Anika P.',
-    email: 'anika@example.com',
-    phone: '+94 71 987 6543',
-    date: '2026-08-23 10:15',
-    amount: 8900,
-    status: 'Shipped',
-    paymentMethod: 'Stripe (Mastercard •••• 8821)',
-    address: '72 Flower Road, Kandy, Central Province',
-    items: [
-      { name: 'Radiant Glow Serum', qty: 1, price: 8900 }
-    ]
-  },
-  {
-    id: 'ORD-8899',
-    customer: 'Leila M.',
-    email: 'leila@example.com',
-    phone: '+94 76 555 1212',
-    date: '2026-08-21 16:40',
-    amount: 22000,
-    status: 'Delivered',
-    paymentMethod: 'Stripe (Amex •••• 1092)',
-    address: '3 Station Road, Galle, Southern Province',
-    items: [
-      { name: 'Rose Gold Eye Palette', qty: 1, price: 11000 },
-      { name: 'SPF 50 Sunscreen Fluid', qty: 2, price: 5500 }
-    ]
-  },
-  {
-    id: 'ORD-8898',
-    customer: 'Keshara D.',
-    email: 'keshara@example.com',
-    phone: '+94 70 333 4444',
-    date: '2026-08-20 09:22',
-    amount: 4500,
-    status: 'Pending',
-    paymentMethod: 'Stripe (Visa •••• 3311)',
-    address: '55 Baseline Road, Colombo 09, Western Province',
-    items: [
-      { name: 'Velvet Matte Lipstick (Ruby Red)', qty: 1, price: 4500 }
-    ]
-  },
-  {
-    id: 'ORD-8897',
-    customer: 'Dilini Senanayake',
-    email: 'dilini.s@example.com',
-    phone: '+94 77 888 9999',
-    date: '2026-08-19 18:05',
-    amount: 15500,
-    status: 'Delivered',
-    paymentMethod: 'Stripe (Visa •••• 9012)',
-    address: '108 Havelock Road, Colombo 05',
-    items: [
-      { name: 'Midnight Bloom Perfume', qty: 1, price: 15500 }
-    ]
-  }
+// All order statuses available for filtering / updating
+const statusOptions = [
+  { value: 'Pending', label: '⏳ Pending' },
+  { value: 'Processing', label: '⚙️ Processing' },
+  { value: 'Packed', label: '📦 Packed' },
+  { value: 'Shipped', label: '🚚 Shipped' },
+  { value: 'Delivered', label: '✅ Delivered' },
+  { value: 'Cancelled', label: '❌ Cancelled' }
 ];
 
-const statusOptions = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+const statusTabs = [
+  { value: 'All', label: '📋 All' },
+  { value: 'Pending', label: '⏳ Pending' },
+  { value: 'Processing', label: '⚙️ Processing' },
+  { value: 'Shipped', label: '🚚 Shipped' },
+  { value: 'Delivered', label: '✅ Delivered' },
+  { value: 'Cancelled', label: '❌ Cancelled' }
+];
 
 export default function AdminOrders() {
   const [searchParams] = useSearchParams();
-  const [orders, setOrders]   = useState(initialOrders);
+  const [orders, setOrders]   = useState([]);   // starts empty — populated from Supabase
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState(null);
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
@@ -101,42 +43,41 @@ export default function AdminOrders() {
 
   async function fetchOrders() {
     setLoading(true);
+    setDbError(null);
     const { data, error: err } = await supabase
       .from('orders')
       .select(`
-        id, status, total_amount, contact_email, created_at, shipping_address,
+        id, status, total_amount, contact_email, created_at, shipping_address, notes,
         users ( name ),
-        order_items ( product_name, quantity, unit_price )
+        order_items ( product_id, product_name, quantity, unit_price )
       `)
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(200);
 
     if (err) {
       console.error('[AdminOrders] Supabase fetch error:', err.message);
-      setDbError('Could not reach database — showing demo data.');
-      // Keep initialOrders as fallback
-    } else if (data && data.length > 0) {
+      setDbError('Could not reach database. Check Supabase connection.');
+    } else if (data) {
       // Map Supabase rows to component shape with strictly unique IDs
       const mapped = data.map((o) => {
         const cleanId = o.id.replace(/-/g, '').slice(-6).toUpperCase();
         const displayId = `ORD-${cleanId}`;
         const items = (o.order_items && o.order_items.length > 0)
-          ? o.order_items.map(it => ({ name: it.product_name, qty: it.quantity, price: parseFloat(it.unit_price) }))
-          : [{ name: 'Radiant Glow Serum', qty: 1, price: parseFloat(o.total_amount) }];
+          ? o.order_items.map(it => ({ name: it.product_name || 'Product', qty: it.quantity || 1, price: parseFloat(it.unit_price || 0) }))
+          : [{ name: 'Order Item', qty: 1, price: parseFloat(o.total_amount || 0) }];
 
+        const addr = o.shipping_address;
         return {
           id:            displayId,
           _uuid:         o.id,
           customer:      o.users?.name || o.contact_email?.split('@')[0] || 'Customer',
           email:         o.contact_email,
-          phone:         o.shipping_address?.phone || '+94 77 123 4567',
+          phone:         addr?.phone || addr?.mobile || '—',
           date:          new Date(o.created_at).toLocaleString('en-GB'),
-          amount:        parseFloat(o.total_amount),
-          status:        o.status.charAt(0).toUpperCase() + o.status.slice(1),
+          amount:        parseFloat(o.total_amount || 0),
+          status:        (o.status || 'pending').charAt(0).toUpperCase() + (o.status || 'pending').slice(1),
           paymentMethod: 'Stripe',
-          address:       o.shipping_address
-            ? `${o.shipping_address.street || ''}, ${o.shipping_address.city || ''}`
-            : 'Colombo, Western Province',
+          address:       addr ? [addr.street, addr.city, addr.province].filter(Boolean).join(', ') : '—',
           items,
         };
       });
@@ -314,23 +255,23 @@ export default function AdminOrders() {
         
         {/* Status Pill Tabs */}
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].map(st => (
+          {statusTabs.map(st => (
             <button
-              key={st}
-              onClick={() => setSelectedStatus(st)}
+              key={st.value}
+              onClick={() => setSelectedStatus(st.value)}
               style={{
-                background: selectedStatus === st ? 'var(--gradient-brand-vibrant)' : 'rgba(255,255,255,0.04)',
-                color: selectedStatus === st ? '#0d0d0f' : 'var(--color-text-secondary)',
-                border: '1px solid ' + (selectedStatus === st ? 'transparent' : 'var(--color-border)'),
+                background: selectedStatus === st.value ? 'var(--gradient-brand-vibrant)' : 'rgba(255,255,255,0.04)',
+                color: selectedStatus === st.value ? '#0d0d0f' : 'var(--color-text-secondary)',
+                border: '1px solid ' + (selectedStatus === st.value ? 'transparent' : 'var(--color-border)'),
                 borderRadius: 'var(--radius-full)',
                 padding: '6px 14px',
                 fontSize: 'var(--text-xs)',
-                fontWeight: selectedStatus === st ? '700' : '500',
+                fontWeight: selectedStatus === st.value ? '700' : '500',
                 cursor: 'pointer',
                 transition: 'all 150ms ease'
               }}
             >
-              {st} {st !== 'All' && `(${orders.filter(o => o.status === st).length})`}
+              {st.label}
             </button>
           ))}
         </div>
@@ -350,16 +291,16 @@ export default function AdminOrders() {
       </div>
 
       {/* ── Orders Table ────────────────────────────────────────────────── */}
-      <div className="card glass" style={{ padding: '0', overflowX: 'hidden' }}>
-        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', textAlign: 'left' }}>
+      <div className="card glass" style={{ padding: '0', overflowX: 'auto' }}>
+        <table style={{ width: '100%', minWidth: '880px', tableLayout: 'fixed', borderCollapse: 'collapse', textAlign: 'left' }}>
           <colgroup>
             <col style={{ width: '9%' }} />
             <col style={{ width: '16%' }} />
             <col style={{ width: '14%' }} />
-            <col style={{ width: '15%' }} />
+            <col style={{ width: '13%' }} />
             <col style={{ width: '11%' }} />
             <col style={{ width: '11%' }} />
-            <col style={{ width: '24%' }} />
+            <col style={{ width: '26%' }} />
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'rgba(255,255,255,0.02)', color: 'var(--color-text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -422,45 +363,48 @@ export default function AdminOrders() {
                 </td>
 
                 {/* Actions Dropdown + Update Status Button */}
-                <td style={{ padding: '8px', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
+                <td style={{ padding: '8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', whiteSpace: 'nowrap' }}>
                     <select
                       id={`order-status-${o.id}`}
                       defaultValue={o.status}
                       onChange={e => handleStatusChange(o.id, e.target.value)}
                       style={{
-                        padding: '4px',
-                        fontSize: '11px',
+                        padding: '5px 8px',
+                        fontSize: '12px',
                         borderRadius: 'var(--radius-sm)',
                         background: 'var(--color-bg-input)',
                         border: '1px solid var(--color-border)',
                         color: 'var(--color-text-primary)',
                         cursor: 'pointer',
-                        width: '74px',
-                        minWidth: 0
+                        width: 'auto',
+                        minWidth: '122px',
                       }}
                     >
                       {statusOptions.map(opt => (
-                        <option key={opt} value={opt} style={{ background: 'var(--color-bg-secondary)' }}>{opt}</option>
+                        <option key={opt.value} value={opt.value} style={{ background: 'var(--color-bg-secondary)' }}>{opt.label}</option>
                       ))}
                     </select>
 
                     <button
                       className="btn btn-secondary btn-sm"
-                      style={{ fontSize: '10px', padding: '4px', whiteSpace: 'nowrap' }}
+                      style={{ fontSize: '13px', padding: '5px 8px', lineHeight: 1 }}
                       onClick={() => {
                         const sel = document.getElementById(`order-status-${o.id}`);
                         if (sel) handleStatusChange(o.id, sel.value);
                       }}
+                      title="Save updated status to Supabase"
                     >
-                      Update
+                      💾
                     </button>
 
                     <button
                       className="btn btn-ghost btn-sm"
+                      style={{ fontSize: '13px', padding: '5px 8px', lineHeight: 1 }}
                       onClick={() => setActiveOrderModal(o)}
+                      title="View order details"
                     >
-                      View
+                      👁️
                     </button>
                   </div>
                 </td>

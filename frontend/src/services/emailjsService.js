@@ -16,15 +16,17 @@ const PUBLIC_KEY  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
  */
 export async function sendSupportEmail(formData) {
   const templateParams = {
-    to_name: 'AuraGlow Support Team',
+    name: formData.name,
     from_name: formData.name,
+    email: formData.email,
     from_email: formData.email,
+    reply_to: formData.email,
     subject: formData.subject || 'Customer Support Inquiry',
     message: formData.message,
-    reply_to: formData.email,
+    to_name: 'AuraGlow Support Team',
   };
 
-  if (!SERVICE_ID || !PUBLIC_KEY) {
+  if (!SERVICE_ID || !PUBLIC_KEY || !TEMPLATE_ID) {
     console.log('📧 [EmailJS Demo Mode] Support email sent:', templateParams);
     return { success: true, mode: 'demo' };
   }
@@ -32,11 +34,11 @@ export async function sendSupportEmail(formData) {
   try {
     const result = await emailjs.send(
       SERVICE_ID,
-      TEMPLATE_ID || 'template_support',
+      TEMPLATE_ID,
       templateParams,
       PUBLIC_KEY
     );
-    console.log('✅ [EmailJS Success] Support email dispatched:', result.status, result.text);
+    console.log('✅ [EmailJS Success] Support inquiry dispatched:', result.status, result.text);
     return { success: true, mode: 'live', result };
   } catch (error) {
     console.error('❌ [EmailJS Error] Support email failed:', error);
@@ -45,11 +47,19 @@ export async function sendSupportEmail(formData) {
 }
 
 /**
- * Send order confirmation invoice via EmailJS
+ * Order invoice notification — Handled on the server via Nodemailer (Gmail SMTP).
+ * EmailJS is reserved strictly for customer support inquiries.
  */
 export async function sendOrderInvoiceEmail(order) {
+  // If the user hasn't configured a separate, dedicated EmailJS invoice template,
+  // do not dispatch to the Contact Us template. Nodemailer handles full HTML invoices.
+  const INVOICE_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_INVOICE_TEMPLATE_ID || '';
+  if (!INVOICE_TEMPLATE_ID) {
+    console.log('ℹ️ [Email] Order invoice dispatched via backend Nodemailer.');
+    return { success: true, mode: 'nodemailer' };
+  }
+
   const recipient = order?.shippingAddress?.email || order?.contact_email || 'customer@example.com';
-  
   const templateParams = {
     to_name: `${order?.shippingAddress?.firstName || 'Valued'} ${order?.shippingAddress?.lastName || 'Customer'}`,
     to_email: recipient,
@@ -60,22 +70,16 @@ export async function sendOrderInvoiceEmail(order) {
     placed_at: new Date(order?.placedAt || Date.now()).toLocaleDateString(),
   };
 
-  if (!SERVICE_ID || !PUBLIC_KEY) {
-    console.log('📧 [EmailJS Demo Mode] Order Invoice sent:', templateParams);
-    return { success: true, mode: 'demo' };
-  }
-
   try {
     const result = await emailjs.send(
       SERVICE_ID,
-      TEMPLATE_ID || 'template_invoice',
+      INVOICE_TEMPLATE_ID,
       templateParams,
       PUBLIC_KEY
     );
-    console.log('✅ [EmailJS Success] Invoice email dispatched:', result.status, result.text);
     return { success: true, mode: 'live', result };
   } catch (error) {
-    console.error('❌ [EmailJS Error] Invoice email failed:', error);
+    console.warn('[EmailJS Invoice note]:', error.text || error.message);
     return { success: false, error: error.text || error.message };
   }
 }

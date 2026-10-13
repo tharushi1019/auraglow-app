@@ -9,6 +9,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GROQ_API_KEY   = process.env.GROQ_API_KEY || '';
 
 let genAI = null;
 if (GEMINI_API_KEY && GEMINI_API_KEY.trim().length > 10) {
@@ -19,7 +20,45 @@ if (GEMINI_API_KEY && GEMINI_API_KEY.trim().length > 10) {
     console.warn('⚠️ [AI Service] Failed to initialize Google Gemini:', err.message);
   }
 } else {
-  console.log('ℹ️ [AI Service] GEMINI_API_KEY not found or empty. Using intelligent clinical diagnostic fallback.');
+  console.log('ℹ️ [AI Service] GEMINI_API_KEY not configured.');
+}
+
+if (GROQ_API_KEY && GROQ_API_KEY.trim().length > 10) {
+  console.log('⚡ [AI Service] Groq AI client configured as resilient high-speed fallback.');
+}
+
+function withTimeout(promise, ms = 6000, errorMsg = 'AI provider timed out') {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(errorMsg)), ms)),
+  ]);
+}
+
+/**
+ * Universal Groq Chat Completion caller
+ */
+async function callGroq({ messages, jsonMode = false, maxTokens = 3000 }) {
+  if (!GROQ_API_KEY) throw new Error('GROQ_API_KEY not configured');
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${GROQ_API_KEY.trim()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'openai/gpt-oss-120b',
+      messages,
+      max_tokens: maxTokens,
+      temperature: 0.5,
+      ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+    }),
+  });
+
+  const data = await response.json();
+  if (data.error) {
+    throw new Error(data.error.message || 'Groq API request failed');
+  }
+  return data.choices?.[0]?.message?.content || '';
 }
 
 /**
@@ -50,23 +89,10 @@ Available AuraGlow Products in store:
 `;
 
 /**
- * Generate a personalized skincare routine using Google Gemini
+ * Generate a personalized skincare routine using Google Gemini with Groq fallback
  */
 async function generateAiRoutine({ skinType = 'Combination', concerns = [], allergens = [], skinTone = 'Medium', undertone = 'Warm', userNotes = '' }) {
-  const isKeyConfigured = Boolean(genAI);
-
-  if (isKeyConfigured) {
-    try {
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-flash-lite-latest',
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 1200,
-          responseMimeType: 'application/json',
-        },
-      });
-
-      const prompt = `
+  const prompt = `
 You are AuraGlow's Chief Clinical Dermatologist and Cosmetic Chemist.
 A client has submitted their clinical skin diagnostic with the following parameters:
 - Skin Type: ${skinType}
@@ -124,17 +150,25 @@ PM routine must have 2-3 steps (Cleanse, Repair/Serum, Overnight Hydration).
 Assign the best matching AuraGlow product ID from the catalog to each step where applicable.
 `;
 
-      const result = await model.generateContent(prompt);
-      let text = result.response.text();
+  // ── 1. Primary Engine: Google Gemini ──
+  if (genAI) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-flash-lite-latest',
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 3000,
+          responseMimeType: 'application/json',
+        },
+      });
 
-      // Gemini 3.x models wrap JSON in markdown code fences — strip them
-      text = text.trim();
+      const result = await withTimeout(model.generateContent(prompt), 6000, 'Gemini response timed out');
+      let text = result.response.text().trim();
       if (text.startsWith('```')) {
         text = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
       }
 
       const parsed = JSON.parse(text);
-
       return {
         success: true,
         isRealAI: true,
@@ -142,35 +176,58 @@ Assign the best matching AuraGlow product ID from the catalog to each step where
         routine: parsed,
       };
     } catch (geminiError) {
-      console.warn('⚠️ [AI Service] Gemini API call error, falling back to clinical rule engine:', geminiError.message);
+      console.warn('⚠️ [AI Service] Gemini API call error, switching to Groq fallback:', geminiError.message);
     }
   }
 
-  // Clinical Rule-Based Diagnostic Engine Fallback
+  // ── 2. Secondary Engine: Groq AI Fallback ──
+  if (GROQ_API_KEY) {
+    try {
+      const groqRaw = await callGroq({
+        messages: [
+          {
+            role: 'system',
+            content: 'You are AuraGlow\'s Chief Clinical Dermatologist and Cosmetic Chemist. You MUST output ONLY a valid JSON object matching the requested schema without any markdown formatting.',
+          },
+          { role: 'user', content: prompt }
+        ],
+        jsonMode: true,
+        maxTokens: 3000,
+      });
+
+      let cleanJson = groqRaw.trim();
+      if (cleanJson.startsWith('```')) {
+        cleanJson = cleanJson.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+      }
+
+      const parsed = JSON.parse(cleanJson);
+      console.log('⚡ [AI Service] Routine generated successfully via Groq AI (openai/gpt-oss-120b).');
+      return {
+        success: true,
+        isRealAI: true,
+        model: 'Groq AI (openai/gpt-oss-120b)',
+        routine: parsed,
+      };
+    } catch (groqError) {
+      console.warn('⚠️ [AI Service] Groq fallback error, switching to clinical rule engine:', groqError.message);
+    }
+  }
+
+  // ── 3. Tertiary Engine: Clinical Rule-Based Diagnostic Engine Fallback ──
   return {
     success: true,
     isRealAI: false,
     model: 'AuraGlow Clinical Diagnostic Engine (Fallback)',
-    notice: 'Using built-in clinical algorithm. Set GEMINI_API_KEY in backend/.env for live Google Gemini generation.',
+    notice: 'Using built-in clinical algorithm.',
     routine: generateFallbackRoutine(skinType, concerns, allergens),
   };
 }
 
 /**
- * Interactive Dermatologist Consultation with AI
+ * Interactive Dermatologist Consultation with AI (Gemini with Groq fallback)
  */
 async function consultAiDermatologist({ question, skinProfile = {}, history = [] }) {
-  if (genAI && question) {
-    try {
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-flash-lite-latest',
-        generationConfig: {
-          temperature: 0.6,
-          maxOutputTokens: 600,
-        },
-      });
-
-      const prompt = `
+  const prompt = `
 You are the AuraGlow Senior AI Skincare Consultant and Cosmetic Dermatologist.
 Client Profile:
 - Skin Type: ${skinProfile.skinType || 'Not specified'}
@@ -188,7 +245,18 @@ Provide a warm, professional, highly informative response in 3-4 concise paragra
 - Keep the tone encouraging, luxurious, and clean-beauty focused.
 `;
 
-      const result = await model.generateContent(prompt);
+  // 1. Google Gemini
+  if (genAI && question) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-flash-lite-latest',
+        generationConfig: {
+          temperature: 0.6,
+          maxOutputTokens: 1000,
+        },
+      });
+
+      const result = await withTimeout(model.generateContent(prompt), 6000, 'Gemini response timed out');
       const reply = result.response.text();
 
       return {
@@ -198,11 +266,34 @@ Provide a warm, professional, highly informative response in 3-4 concise paragra
         reply: reply.trim(),
       };
     } catch (err) {
-      console.warn('⚠️ [AI Consult] Gemini error:', err.message);
+      console.warn('⚠️ [AI Consult] Gemini error, switching to Groq:', err.message);
     }
   }
 
-  // Fallback consultation answers
+  // 2. Groq Fallback
+  if (GROQ_API_KEY && question) {
+    try {
+      const reply = await callGroq({
+        messages: [
+          { role: 'system', content: 'You are the AuraGlow Senior AI Skincare Consultant and Cosmetic Dermatologist.' },
+          { role: 'user', content: prompt }
+        ],
+        jsonMode: false,
+        maxTokens: 1000,
+      });
+
+      return {
+        success: true,
+        isRealAI: true,
+        model: 'Groq AI (openai/gpt-oss-120b)',
+        reply: reply.trim(),
+      };
+    } catch (groqErr) {
+      console.warn('⚠️ [AI Consult] Groq error:', groqErr.message);
+    }
+  }
+
+  // 3. Built-in consultation answers
   return {
     success: true,
     isRealAI: false,

@@ -42,7 +42,7 @@ const navLinkStyle = (isActive) => ({
 });
 
 export default function AdminLayout() {
-  const { currency, setCurrency, availableCurrencies } = useCurrency();
+  const { currency, setCurrency, availableCurrencies, formatPrice } = useCurrency();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -54,6 +54,39 @@ export default function AdminLayout() {
   const [notificationError, setNotificationError] = useState('');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [snapshot, setSnapshot] = useState({ revenue: 0, orders: 0, customers: 0, loading: true });
+
+  useEffect(() => {
+    async function loadSnapshot() {
+      try {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const [ordersRes, usersRes] = await Promise.all([
+          supabase.from('orders').select('total_amount, status, created_at'),
+          supabase.from('users').select('id', { count: 'exact', head: true })
+        ]);
+
+        const allOrders = ordersRes.data || [];
+        const todayOrders = allOrders.filter(o => 
+          new Date(o.created_at) >= startOfDay && o.status !== 'cancelled'
+        );
+        const activeOrders = todayOrders.length > 0 ? todayOrders : allOrders.filter(o => o.status !== 'cancelled');
+        const rev = activeOrders.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+
+        setSnapshot({
+          revenue: rev,
+          orders: activeOrders.length,
+          customers: usersRes.count || (allOrders.length ? allOrders.length : 1),
+          loading: false,
+        });
+      } catch (err) {
+        console.warn('[AdminLayout] Snapshot load note:', err.message);
+        setSnapshot(prev => ({ ...prev, loading: false }));
+      }
+    }
+    loadSnapshot();
+  }, []);
 
   useEffect(() => {
     async function loadNotifications() {
@@ -195,9 +228,9 @@ export default function AdminLayout() {
             Today's Snapshot
           </div>
           {[
-            { label: 'Revenue', value: 'Rs. 1.24M', color: 'var(--color-accent-rose)' },
-            { label: 'Orders', value: '142', color: 'var(--color-success)' },
-            { label: 'Visitors', value: '3,810', color: 'var(--color-accent-lavender)' },
+            { label: 'Revenue', value: snapshot.loading ? '…' : formatPrice(snapshot.revenue), color: 'var(--color-accent-rose)' },
+            { label: 'Orders', value: snapshot.loading ? '…' : snapshot.orders.toLocaleString(), color: 'var(--color-success)' },
+            { label: 'Customers', value: snapshot.loading ? '…' : snapshot.customers.toLocaleString(), color: 'var(--color-accent-lavender)' },
           ].map(kpi => (
             <div key={kpi.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>{kpi.label}</span>

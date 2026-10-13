@@ -5,19 +5,10 @@
  * =============================================================================
  */
 
+
 const supabase = require('../config/supabaseClient');
 
-// Fallback mock stores
-let mockProducts = [
-  { id: 'b2000000-0000-0000-0000-000000000001', name: 'Radiant Glow Serum', brand: 'AuraGlow', category: 'skincare', price: 8900, stock: 45 },
-  { id: 'b2000000-0000-0000-0000-000000000002', name: 'Velvet Matte Lipstick', brand: 'AuraGlow', category: 'makeup', price: 4500, stock: 12 },
-  { id: 'b2000000-0000-0000-0000-000000000003', name: 'Petal Hydra Cream', brand: 'AuraGlow', category: 'skincare', price: 7200, stock: 0 },
-];
 
-let mockOrders = [
-  { id: 'AG-8821-4412', customer: 'Sasha Ranasinghe', total: 13400, status: 'processing', placedAt: new Date().toISOString() },
-  { id: 'AG-9102-1182', customer: 'Keshara Perera', total: 8900, status: 'shipped', placedAt: new Date().toISOString() },
-];
 
 /**
  * GET /api/v1/admin/analytics

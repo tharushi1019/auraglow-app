@@ -142,7 +142,7 @@ function buildOrderConfirmationTemplate(order) {
     </div>
 
     <div style="text-align:center;">
-      <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/orders/${orderId}"
+      <a href="${process.env.FRONTEND_URL || 'https://auraglow-app.netlify.app'}/orders/${orderId}"
          style="display:inline-block;background:linear-gradient(135deg,#D47A6A,#C4956A);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;">
         Track Your Order &#8594;
       </a>
@@ -205,11 +205,11 @@ function buildWelcomeTemplate(user) {
     </div>
 
     <div style="text-align:center;">
-      <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/skin-quiz"
+      <a href="${process.env.FRONTEND_URL || 'https://auraglow-app.netlify.app'}/skin-quiz"
          style="display:inline-block;background:linear-gradient(135deg,#D47A6A,#C4956A);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;margin:0 6px 12px;">
         Take Skin Quiz &#10024;
       </a>
-      <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/products"
+      <a href="${process.env.FRONTEND_URL || 'https://auraglow-app.netlify.app'}/products"
          style="display:inline-block;background:transparent;color:#D47A6A;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;border:2px solid #D47A6A;margin:0 6px 12px;">
         Shop Now &#8594;
       </a>
@@ -261,7 +261,7 @@ function buildSkinQuizTemplate(user, skinProfile) {
       <p style="margin:0 0 8px;color:#C4A090;font-size:13px;text-transform:uppercase;letter-spacing:1px;">Recommended For You</p>
       <h3 style="margin:0 0 8px;color:#FFFFFF;font-size:20px;">Your Personalized Products Are Waiting</h3>
       <p style="margin:0 0 20px;color:#9A8A84;font-size:14px;line-height:1.6;">Based on your ${skinType} skin profile, we curated the perfect routine for you.</p>
-      <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/products"
+      <a href="${process.env.FRONTEND_URL || 'https://auraglow-app.netlify.app'}/products"
          style="display:inline-block;background:linear-gradient(135deg,#D47A6A,#C4956A);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;">
         See Your Recommendations &#8594;
       </a>
@@ -271,7 +271,7 @@ function buildSkinQuizTemplate(user, skinProfile) {
       <div style="font-size:28px;margin-bottom:8px;">&#129302;</div>
       <h3 style="margin:0 0 8px;color:#2D2522;font-size:16px;">Try the Glow AI Advisor</h3>
       <p style="margin:0 0 16px;color:#7A6B65;font-size:14px;">Get a complete morning &amp; evening skincare routine tailored to your profile.</p>
-      <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/routine-advisor"
+      <a href="${process.env.FRONTEND_URL || 'https://auraglow-app.netlify.app'}/routine-advisor"
          style="display:inline-block;background:transparent;color:#D47A6A;text-decoration:none;padding:10px 28px;border-radius:50px;font-size:14px;font-weight:600;border:2px solid #D47A6A;">
         Get My Routine &#10024;
       </a>

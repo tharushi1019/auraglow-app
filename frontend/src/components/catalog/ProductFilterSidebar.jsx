@@ -33,6 +33,7 @@ export default function ProductFilterSidebar({
 
   return (
     <aside
+      className="catalog-filter-sidebar"
       style={{
         background: 'var(--color-bg-card)',
         border: '1px solid var(--color-border)',
@@ -41,8 +42,6 @@ export default function ProductFilterSidebar({
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--space-6)',
-        position: 'sticky',
-        top: 'calc(var(--nav-height) + var(--space-6))',
       }}
     >
       {/* Sidebar Header */}

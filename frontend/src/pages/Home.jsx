@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/common/Navbar';
 import { useCurrency } from '@/context/CurrencyContext';
-import { getFeaturedProducts } from '@/data/mockData';
+import { supabase } from '@/lib/supabase';
 
-// ─── Data ────────────────────────────────────────────────────────────────────
+// ─── Static category display data ────────────────────────────────────────────
 
-const categories = [
+const CATEGORY_DISPLAY = [
   {
     name: 'Skincare',
     desc: 'Serums, moisturizers & treatments',
@@ -40,9 +40,6 @@ const categories = [
     border: 'rgba(212,175,130,0.3)',
   },
 ];
-
-// Featured products come from the shared data file
-const featured = getFeaturedProducts();
 
 const ingredients = [
   { icon: '🌹', name: 'Rose Hip Oil', benefit: 'Brightens & evens skin tone' },
@@ -139,6 +136,93 @@ function ProductCard({ p }) {
 export default function Home() {
   const [quizSkinType, setQuizSkinType] = useState(null);
   const skinTypes = ['Dry', 'Oily', 'Combination', 'Sensitive'];
+  const categories = CATEGORY_DISPLAY;
+
+  // ── Live trending products from DB (sorted by sales) ──────────────────────
+  const [featured, setFeatured] = useState([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+
+  // ── Live site stats ───────────────────────────────────────────────────────
+  const [siteStats, setSiteStats] = useState({ customers: '50K+', avgRating: '4.9 ★', products: '200+', shipping: 'Free' });
+
+  useEffect(() => {
+    // Fetch top-selling (trending) products — 4 for homepage grid
+    async function loadTrending() {
+      setFeaturedLoading(true);
+      try {
+        // Get order_items to determine bestsellers
+        const { data: salesData } = await supabase
+          .from('order_items')
+          .select('product_id, quantity');
+
+        const salesMap = {};
+        if (salesData) {
+          salesData.forEach(row => {
+            salesMap[row.product_id] = (salesMap[row.product_id] || 0) + (row.quantity || 1);
+          });
+        }
+
+        // Fetch all active products
+        const { data: products, error } = await supabase
+          .from('products')
+          .select('id, name, brand, category, price, stock_quantity, is_vegan, is_cruelty_free, images, description')
+          .eq('is_active', true);
+
+        if (error || !products) throw error;
+
+        // Sort by sales → take top 4
+        const sorted = [...products].sort((a, b) =>
+          (salesMap[b.id] || 0) - (salesMap[a.id] || 0)
+        ).slice(0, 4);
+
+        // Map to card-friendly shape
+        setFeatured(sorted.map(p => ({
+          id: p.id,
+          name: p.name,
+          brand: p.brand || 'AuraGlow',
+          category: p.category,
+          price: parseFloat(p.price) || 0,
+          rating: 4.8,
+          reviewCount: salesMap[p.id] || 0,
+          isVegan: p.is_vegan,
+          isCrueltyFree: p.is_cruelty_free,
+          badge: p.is_vegan ? '🌱 Vegan' : '🐰 Cruelty-Free',
+          badgeClass: p.is_vegan ? 'badge-vegan' : 'badge-cruelty-free',
+          image: (Array.isArray(p.images) && p.images[0]) ? p.images[0]
+            : 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=500&q=80',
+          salesCount: salesMap[p.id] || 0,
+          stock: p.stock_quantity ?? 0,
+        })));
+      } catch (e) {
+        console.warn('Home: trending products note:', e?.message);
+      } finally {
+        setFeaturedLoading(false);
+      }
+    }
+
+    // Fetch live stats
+    async function loadStats() {
+      try {
+        const [{ count: custCount }, { count: prodCount }, { data: orders }] = await Promise.all([
+          supabase.from('users').select('*', { count: 'exact', head: true }),
+          supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
+          supabase.from('reviews').select('rating'),
+        ]);
+        const avgRating = orders && orders.length > 0
+          ? (orders.reduce((a, r) => a + r.rating, 0) / orders.length).toFixed(1)
+          : '4.9';
+        setSiteStats(prev => ({
+          ...prev,
+          customers: custCount > 0 ? `${custCount}+` : prev.customers,
+          products:  prodCount > 0 ? `${prodCount}+` : prev.products,
+          avgRating: `${avgRating} ★`,
+        }));
+      } catch (e) {}
+    }
+
+    loadTrending();
+    loadStats();
+  }, []);
 
   return (
     <div style={{ paddingBottom: 'var(--space-12)' }}>
@@ -216,10 +300,10 @@ export default function Home() {
       {/* ── 3. SOCIAL PROOF BAR ────────────────────────────────────────────── */}
       <section style={{ borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-secondary)', padding: 'var(--space-4) var(--space-10)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-12)', flexWrap: 'wrap' }}>
         {[
-          { value: '50K+', label: 'Happy Customers' },
-          { value: '4.9 ★', label: 'Average Rating' },
-          { value: '200+', label: 'Clean Products' },
-          { value: 'Free', label: 'Shipping Over RM150' },
+          { value: siteStats.customers, label: 'Happy Customers' },
+          { value: siteStats.avgRating, label: 'Average Rating' },
+          { value: siteStats.products, label: 'Clean Products' },
+          { value: 'Free', label: 'Shipping Over Rs. 5,000' },
         ].map(s => (
           <div key={s.label} style={{ textAlign: 'center' }}>
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: '700', background: 'var(--gradient-text)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{s.value}</div>
@@ -251,18 +335,38 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 5. FEATURED PRODUCTS ───────────────────────────────────────────── */}
+      {/* ── 5. FEATURED PRODUCTS (Live — sorted by real sales) ──────────── */}
       <section className="container" style={{ paddingTop: 'var(--space-16)' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 'var(--space-8)' }}>
           <div>
             <p className="section-heading__eyebrow" style={{ textAlign: 'left', marginBottom: 'var(--space-2)' }}>Best Sellers</p>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: '700' }}>Trending Right Now</h2>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: '4px' }}>Ranked by actual sales — updated in real time</p>
           </div>
           <Link to="/products" className="btn btn-ghost btn-sm btn-pill">View All Products →</Link>
         </div>
-        <div className="home-prod-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-6)' }}>
-          {featured.map(p => <ProductCard key={p.id} p={p} />)}
-        </div>
+        {featuredLoading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-6)' }}>
+            {[1,2,3,4].map(i => (
+              <div key={i} className="card" style={{ aspectRatio: '3/4', background: 'rgba(255,255,255,0.03)', animation: 'pulse 1.5s ease-in-out infinite' }}>
+                <div style={{ height: '60%', background: 'rgba(255,255,255,0.05)', borderRadius: '8px 8px 0 0' }} />
+                <div style={{ padding: 'var(--space-4)' }}>
+                  <div style={{ height: '14px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', marginBottom: '8px' }} />
+                  <div style={{ height: '20px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', width: '70%' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : featured.length > 0 ? (
+          <div className="home-prod-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-6)' }}>
+            {featured.map(p => <ProductCard key={p.id} p={p} />)}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--color-text-muted)' }}>
+            <div style={{ fontSize: '48px', marginBottom: 'var(--space-4)' }}>🛍️</div>
+            <p>No products yet — check back soon or <Link to="/products" style={{ color: 'var(--color-accent-rose)' }}>browse the catalog</Link>.</p>
+          </div>
+        )}
       </section>
 
       {/* ── 6. SKIN QUIZ PROMO BANNER ──────────────────────────────────────── */}
