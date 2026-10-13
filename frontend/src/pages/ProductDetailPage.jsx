@@ -26,6 +26,7 @@ export default function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState('description');
   const [toastMessage, setToastMessage] = useState(null);
   const [added, setAdded] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const isWishlisted = product ? isInWishlist(product.id) : false;
 
@@ -56,7 +57,7 @@ export default function ProductDetailPage() {
       }
     }
     loadProduct();
-  }, [id]);
+  }, [id, retryCount]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -104,13 +105,22 @@ export default function ProductDetailPage() {
         <Navbar />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 'var(--space-4)', marginTop: 'var(--nav-height)', padding: 'var(--space-10)' }}>
           <div style={{ fontSize: '3.5rem' }}>🍃</div>
-          <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: '800', color: 'var(--color-text-primary)' }}>Product Not Found</h2>
-          <p style={{ color: 'var(--color-text-secondary)', maxWidth: '400px', textAlign: 'center' }}>
-            {productError || 'The clean beauty formula you are looking for might be out of season or renamed.'}
+          <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: '800', color: 'var(--color-text-primary)' }}>Product Unavailable</h2>
+          <p style={{ color: 'var(--color-text-secondary)', maxWidth: '420px', textAlign: 'center', lineHeight: 1.6 }}>
+            {productError || 'This product could not be loaded. It may be temporarily unavailable.'}
           </p>
-          <Link to="/products" className="btn btn-primary btn-pill">
-            Explore All Products 🌸
-          </Link>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button
+              onClick={() => setRetryCount(c => c + 1)}
+              className="btn btn-primary btn-pill"
+              style={{ padding: '12px 28px' }}
+            >
+              🔄 Try Again
+            </button>
+            <Link to="/products" className="btn btn-secondary btn-pill" style={{ padding: '12px 28px' }}>
+              Browse All Products
+            </Link>
+          </div>
         </div>
         <Footer />
       </div>
